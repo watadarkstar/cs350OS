@@ -85,6 +85,20 @@ int MouseSleepTime = 3;  // length of time a mouse spends sleeping
  */
 struct semaphore *CatMouseWait;
 
+/* to synchranize how many of cats | mice eat at a time until we switch */
+bool miceEat = true;// negative for cats - positive for mice
+struct lock *lockWho;
+struct cv *cvWho;
+
+/* lock for currentBowl */
+struct lock *lockStates;
+char *bowlStates;
+
+/* the locks for each bowl */
+int availableBowls = 0;
+struct lock *lockBowl;
+struct cv *cvBowl;
+
 /*
  * 
  * Function Definitions
@@ -115,13 +129,12 @@ void
 cat_simulation(void * unusedpointer, 
                unsigned long catnumber)
 {
-  int i;
+  int i, x;
   unsigned int bowl;
 
   /* avoid unused variable warnings. */
   (void) unusedpointer;
   (void) catnumber;
-
 
   /* your simulated cat must iterate NumLoops times,
    *  sleeping (by calling cat_sleep() and eating
@@ -142,9 +155,31 @@ cat_simulation(void * unusedpointer,
      * synchronization so that the cat does not violate
      * the rules when it eats */
 
-    /* legal bowl numbers range from 1 to NumBowls */
-    bowl = ((unsigned int)random() % NumBowls) + 1;
-    cat_eat(bowl, CatEatTime);
+    
+    lock_acquire(lockBowl);
+      while (availableBowls == 0) {
+        cv_wait(cvBowl, lockBowl);
+      }
+
+      /* find available bowl */
+      lock_acquire(lockStates);
+        for (x = 1; x < NumBowls && bowlStates[x - 1] != '-'; x++){}
+        bowl = x;
+        bowlStates[x - 1] = 'c';
+      lock_release(lockStates);
+
+      availableBowls--;
+    lock_release(lockBowl);
+      
+      cat_eat(bowl, MouseEatTime);
+
+    lock_acquire(lockBowl);
+      availableBowls++;
+      lock_acquire(lockStates);
+        bowlStates[x - 1] = '-';
+      lock_release(lockStates);
+      cv_signal(cvBowl, lockBowl);
+    lock_release(lockBowl);
 
   }
 
@@ -176,7 +211,7 @@ void
 mouse_simulation(void * unusedpointer,
           unsigned long mousenumber)
 {
-  int i;
+  int i, index;
   unsigned int bowl;
 
   /* Avoid unused variable warnings. */
@@ -203,10 +238,24 @@ mouse_simulation(void * unusedpointer,
      * synchronization so that the mouse does not violate
      * the rules when it eats */
 
-    /* legal bowl numbers range from 1 to NumBowls */
-    bowl = ((unsigned int)random() % NumBowls) + 1;
-    mouse_eat(bowl, MouseEatTime);
 
+    lock_acquire(lockBowl);
+      while (availableBowls == 0) {
+        cv_wait(cvBowl, lockBowl);
+      }
+
+      /* find available bowl */
+      lock_acquire(lockStates);
+        for (index = 0; index < NumBowls; index++){}
+        bowl = index;
+        bowlStates[bowl] = 'm';
+      lock_release(lockStates);
+      
+      availableBowls--;
+      mouse_eat(bowl, MouseEatTime);
+      availableBowls++;
+      cv_signal(cvBowl, lockBowl);
+    lock_release(lockBowl);
   }
 
   /* indicate that this mouse is finished */
@@ -328,6 +377,22 @@ catmouse(int nargs,
     panic("catmouse: error initializing bowls.\n");
   }
 
+   // ------------------------------------------------------------------------
+   // initialize my stuff
+   // ------------------------------------------------------------------------
+   availableBowls = NumBowls;
+   cvBowl = cv_create("available bowls");
+   lockBowl = lock_create("available bowls");
+
+   bowlStates = (char *)kmalloc(sizeof(char) * NumBowls);
+   for (index = 0; index < NumBowls; index++) { bowlStates[index] = '-'; }
+   lockStates = lock_create("states");
+  
+    kprintf("Finished Initialization Stage...\n\n");
+   // ------------------------------------------------------------------------
+
+
+
   /*
    * Start NumCats cat_simulation() threads.
    */
@@ -353,6 +418,14 @@ catmouse(int nargs,
   for(i=0;i<(NumCats+NumMice);i++) {
     P(CatMouseWait);
   }
+
+  // ------------------------------------------------------------------------
+  // destroy my stuff
+  // ------------------------------------------------------------------------
+  cv_destroy(cvBowl);
+  lock_destroy(lockBowl);
+  lock_destroy(lockStates);
+  // ------------------------------------------------------------------------
 
   /* clean up the semaphore that we created */
   sem_destroy(CatMouseWait);
