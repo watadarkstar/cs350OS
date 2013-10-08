@@ -73,7 +73,7 @@ int NumLoops;  // number of times each cat and mouse should eat
  * Defaults here are as they were with the previos implementation
  * where these could not be changed.
  */
-int CatEatTime = 1;      // length of time a cat spends eating
+int nEatTime = 1;      // length of time a cat spends eating
 int CatSleepTime = 5;    // length of time a cat spends sleeping
 int MouseEatTime = 3;    // length of time a mouse spends eating
 int MouseSleepTime = 3;  // length of time a mouse spends sleeping
@@ -86,12 +86,13 @@ int MouseSleepTime = 3;  // length of time a mouse spends sleeping
 struct semaphore *CatMouseWait;
 
 /* to synchranize how many of cats | mice eat at a time until we switch */
-bool miceEat = true;// negative for cats - positive for mice
-struct lock *lockWho;
-struct cv *cvWho;
+int nEat = 3;// negative for cats - positive for mice
+int ROUND_EAT = 3;
+bool catsEat = true;
+struct lock *lockRound;
+struct cv *cvRound;
 
-/* lock for currentBowl */
-struct lock *lockStates;
+/* bowl states = c | m | - */
 char *bowlStates;
 
 /* the locks for each bowl */
@@ -141,6 +142,8 @@ cat_simulation(void * unusedpointer,
    *  (by calling cat_eat()) on each iteration */
   for(i=0;i<NumLoops;i++) {
 
+    gettimeofday(&tp,NULL);
+
     /* do not synchronize calls to cat_sleep().
        Any number of cats (and mice) should be able
        sleep at the same time. */
@@ -155,33 +158,53 @@ cat_simulation(void * unusedpointer,
      * synchronization so that the cat does not violate
      * the rules when it eats */
 
-    
-    lock_acquire(lockBowl);
-      while (availableBowls == 0) {
-        cv_wait(cvBowl, lockBowl);
+    lock_acquire(lockRound);
+      while (nEat <= 0 || catsEat == false){
+        cv_wait(cvRound, lockRound);
       }
+      nEat--;
+    lock_release(lockRound);
 
-      /* find available bowl */
-      lock_acquire(lockStates);
+      lock_acquire(lockBowl);
+        while (availableBowls == 0) {
+          cv_wait(cvBowl, lockBowl);
+        }
+
+        /* find available bowl */
         for (x = 1; x < NumBowls && bowlStates[x - 1] != '-'; x++){}
+        KASSERT(bowlStates[x - 1] == '-');
         bowl = x;
         bowlStates[x - 1] = 'c';
-      lock_release(lockStates);
+        availableBowls--;
+      lock_release(lockBowl);
+        
+        cat_eat(bowl, MouseEatTime);
 
-      availableBowls--;
-    lock_release(lockBowl);
-      
-      cat_eat(bowl, MouseEatTime);
-
-    lock_acquire(lockBowl);
-      availableBowls++;
-      lock_acquire(lockStates);
+    lock_acquire(lockRound);
+      lock_acquire(lockBowl);
+        availableBowls++;
         bowlStates[x - 1] = '-';
-      lock_release(lockStates);
-      cv_signal(cvBowl, lockBowl);
-    lock_release(lockBowl);
-
+        cv_signal(cvBowl, lockBowl);
+      lock_release(lockBowl);
+      if (nEat <= 0 && availableBowls == NumBowls){
+        nEat = 3;
+        catsEat = false;
+        kprintf("\n\nswitch to mouse\n\n");
+      }
+      cv_broadcast(cvRound, lockRound);
+    lock_release(lockRound);
+    kprintf("\n\n 1 cat is finished eating \n\n");
   }
+  kprintf("\n\n cats DONE \n\n");
+
+  // lock_acquire(lockBowl);
+  //   while (availableBowls != NumBowls) {
+  //     cv_wait(cvBowl, lockBowl);
+  //   }
+  //   catsEat = false;
+  //   nEat = 9000000;
+  //   cv_broadcast(cvBowl, lockBowl);
+  // lock_release(lockBowl);
 
   /* indicate that this cat simulation is finished */
   V(CatMouseWait); 
@@ -211,7 +234,7 @@ void
 mouse_simulation(void * unusedpointer,
           unsigned long mousenumber)
 {
-  int i, index;
+  int i, x;
   unsigned int bowl;
 
   /* Avoid unused variable warnings. */
@@ -229,6 +252,7 @@ mouse_simulation(void * unusedpointer,
        sleep at the same time. */
     mouse_sleep(MouseSleepTime);
 
+
     /* for now, this mouse chooses a random bowl from
      * which to eat, and it is not synchronized with
      * other cats and mice.
@@ -238,25 +262,49 @@ mouse_simulation(void * unusedpointer,
      * synchronization so that the mouse does not violate
      * the rules when it eats */
 
+      lock_acquire(lockRound);
+        while (nEat <= 0 || catsEat == true){
+          cv_wait(cvRound, lockRound);
+        }
+        nEat--;
+        lock_acquire(lockBowl);
+          while (availableBowls == 0) {
+            cv_wait(cvBowl, lockBowl);
+          }
 
-    lock_acquire(lockBowl);
-      while (availableBowls == 0) {
-        cv_wait(cvBowl, lockBowl);
-      }
+          /* find available bowl */
+          for (x = 1; x < NumBowls && bowlStates[x - 1] != '-'; x++){}
+          KASSERT(bowlStates[x - 1] == '-');
+          bowl = x;
+          bowlStates[x - 1] = 'm';
+          availableBowls--;
+        lock_release(lockBowl);
+      lock_release(lockRound);
+          
+          mouse_eat(bowl, MouseEatTime);
 
-      /* find available bowl */
-      lock_acquire(lockStates);
-        for (index = 0; index < NumBowls; index++){}
-        bowl = index;
-        bowlStates[bowl] = 'm';
-      lock_release(lockStates);
-      
-      availableBowls--;
-      mouse_eat(bowl, MouseEatTime);
-      availableBowls++;
-      cv_signal(cvBowl, lockBowl);
-    lock_release(lockBowl);
+      lock_acquire(lockRound);
+        lock_acquire(lockBowl);
+          availableBowls++;
+          bowlStates[x - 1] = '-';
+          cv_signal(cvBowl, lockBowl);
+        lock_release(lockBowl);
+        if (nEat <= 0 && availableBowls == NumBowls){
+          nEat = 3;
+          catsEat = true;
+          kprintf("\n\nswitch to cats\n\n");
+        }
+        cv_broadcast(cvRound, lockRound);
+      lock_release(lockRound);
   }
+  // lock_acquire(lockBowl);
+  //   while (availableBowls != NumBowls) {
+  //     cv_wait(cvBowl, lockBowl);
+  //   }
+  //   catsEat = true;
+  //   nEat = 9000000;
+  //   cv_broadcast(cvBowl, lockBowl);
+  // lock_release(lockBowl);
 
   /* indicate that this mouse is finished */
   V(CatMouseWait); 
@@ -333,9 +381,9 @@ catmouse(int nargs,
   }
 
   if (nargs == 9) {
-    CatEatTime = atoi(args[5]);
+    nEatTime = atoi(args[5]);
     if (NumLoops <= 0) {
-      kprintf("catmouse: invalid cat eating time: %d\n",CatEatTime);
+      kprintf("catmouse: invalid cat eating time: %d\n",nEatTime);
       return 1;
     }
   
@@ -360,7 +408,7 @@ catmouse(int nargs,
 
   kprintf("Using %d bowls, %d cats, and %d mice. Looping %d times.\n",
           NumBowls,NumCats,NumMice,NumLoops);
-  kprintf("Using cat eating time %d, cat sleeping time %d\n", CatEatTime, CatSleepTime);
+  kprintf("Using cat eating time %d, cat sleeping time %d\n", nEatTime, CatSleepTime);
   kprintf("Using mouse eating time %d, mouse sleeping time %d\n", MouseEatTime, MouseSleepTime);
 
   /* create the semaphore that is used to make the main thread
@@ -380,14 +428,24 @@ catmouse(int nargs,
    // ------------------------------------------------------------------------
    // initialize my stuff
    // ------------------------------------------------------------------------
-   availableBowls = NumBowls;
-   cvBowl = cv_create("available bowls");
-   lockBowl = lock_create("available bowls");
+    availableBowls = NumBowls;
+    cvBowl = cv_create("available bowls");
+    lockBowl = lock_create("available bowls");
 
-   bowlStates = (char *)kmalloc(sizeof(char) * NumBowls);
-   for (index = 0; index < NumBowls; index++) { bowlStates[index] = '-'; }
-   lockStates = lock_create("states");
-  
+    bowlStates = (char *)kmalloc(sizeof(char) * NumBowls);
+    for (index = 0; index < NumBowls; index++) { bowlStates[index] = '-'; }
+
+    cvRound = cv_create("round");
+    lockRound = lock_create("round");
+    ROUND_EAT = NumBowls;
+
+    int catTime = nEatTime + CatSleepTime;
+    int mouseTime = MouseEatTime + MouseSleepTime;
+
+    if (catTime > mouseTime ){
+
+    }
+
     kprintf("Finished Initialization Stage...\n\n");
    // ------------------------------------------------------------------------
 
@@ -424,7 +482,8 @@ catmouse(int nargs,
   // ------------------------------------------------------------------------
   cv_destroy(cvBowl);
   lock_destroy(lockBowl);
-  lock_destroy(lockStates);
+  cv_destroy(cvRound);
+  lock_destroy(lockRound);
   // ------------------------------------------------------------------------
 
   /* clean up the semaphore that we created */
