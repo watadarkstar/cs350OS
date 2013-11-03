@@ -199,6 +199,21 @@ sys_reboot(int code)
 }
 
 /*
+ * A2 Functions
+ * TODO: Implement functions here
+ *
+ */
+
+ int sys_open(userptr_t filename, int flags, int mode, int32_t *retval) {
+ 	// TODO Write this
+ 	(void)filename;  // suppress warning until code gets written
+ 	(void)flags;  // suppress warning until code gets written
+ 	(void)mode;  // suppress warning until code gets written
+ 	(void)retval;
+ 	return 0;
+ }
+
+/*
  * Kernel main. Boot up, then fork the menu thread; wait for a reboot
  * request, and then shut down.
  */

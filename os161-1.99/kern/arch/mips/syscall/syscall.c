@@ -35,6 +35,7 @@
 #include <thread.h>
 #include <current.h>
 #include <syscall.h>
+#include "opt-A2.h"
 
 
 /*
@@ -110,6 +111,14 @@ syscall(struct trapframe *tf)
 		break;
 
 	    /* Add stuff here */
+		#if OPT_A2
+		case SYS_open:
+		// MAN File:
+		// int open(const char *filename, int flags);
+		// int open(const char *filename, int flags, int mode);
+		err = sys_open((userptr_t)tf->tf_a0, tf->tf_a1, tf->tf_a2, &retval);
+		break;
+		#endif /* OPT_A2 */
  
 	    default:
 		kprintf("Unknown syscall %d\n", callno);
