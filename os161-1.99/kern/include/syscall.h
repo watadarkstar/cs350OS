@@ -58,6 +58,7 @@ void enter_new_process(int argc, userptr_t argv, vaddr_t stackptr,
 int sys_reboot(int code);
 int sys___time(userptr_t user_seconds, userptr_t user_nanoseconds);
 
+#if OPT_A2
 /* A2 Functions */
 // ------------------------------------------------------------------
 
@@ -67,5 +68,6 @@ int sys___time(userptr_t user_seconds, userptr_t user_nanoseconds);
 int sys_open(userptr_t filename, int flags, int mode, int32_t *retval);
 
 // ------------------------------------------------------------------
+#endif
 
 #endif /* _SYSCALL_H_ */
