@@ -213,10 +213,10 @@ sys_reboot(int code)
 	// #define STDOUT_FILENO 1      /* Standard output */
 	// #define STDERR_FILENO 2      /* Standard error */
  	
+ 	char *buf_c = (char *)buf;
  	if (fd == STDOUT_FILENO){
- 		kprintf("%s\n", (char *)buf);
- 		while (buf != NULL){
-
+ 		for (unsigned int i = 0; i < nbytes; i++){
+ 			kprintf("%c", buf_c[i]);
  		}
  	} else {
  		return EBADF;
@@ -233,6 +233,7 @@ sys_reboot(int code)
  // man page
  // int exit(int code)
  void sys__exit(int code){
+ 	proc_destroy(curthread->t_proc);
  	(void)code;
  }
 
