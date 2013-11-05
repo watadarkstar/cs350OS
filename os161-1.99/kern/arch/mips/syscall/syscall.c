@@ -112,11 +112,18 @@ syscall(struct trapframe *tf)
 
 	    /* Add stuff here */
 		#if OPT_A2
+		case SYS__exit:
+			sys__exit(tf->tf_a0);
+		case SYS_write:
+			// man page
+	 		// int write(int fd, const void *buf, size_t nbytes);
+			err = sys_write(tf->tf_a0, (const void*)tf->tf_a1, (size_t)tf->tf_a2, &retval);
+		break;
 		case SYS_open:
-		// MAN File:
-		// int open(const char *filename, int flags);
-		// int open(const char *filename, int flags, int mode);
-		err = sys_open((userptr_t)tf->tf_a0, tf->tf_a1, tf->tf_a2, &retval);
+			// MAN File:
+			// int open(const char *filename, int flags);
+			// int open(const char *filename, int flags, int mode);
+			err = sys_open((userptr_t)tf->tf_a0, tf->tf_a1, tf->tf_a2, &retval);
 		break;
 		#endif /* OPT_A2 */
  
