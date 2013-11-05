@@ -36,7 +36,7 @@
 
 
 #include <spinlock.h>
-
+#include "opt-A1.h"
 /*
  * Dijkstra-style semaphore.
  *
@@ -74,12 +74,14 @@ void V(struct semaphore *);
  */
 struct lock {
         char *lk_name;
+	#if OPT_A1
+	volatile bool is_locked;
+	struct thread * lk_owner;
+	struct spinlock lk_spinlock;
+	struct wchan * lk_wchan;
+	#endif
         // add what you need here
         // (don't forget to mark things volatile as needed)
-        struct wchan *lk_wchan;
-        struct spinlock lk_lock;
-        struct thread  *lk_holder;
-        volatile bool locked;
 };
 
 struct lock *lock_create(const char *name);
@@ -117,10 +119,12 @@ void lock_destroy(struct lock *);
 
 struct cv {
         char *cv_name;
+	#if OPT_A1
+	struct wchan * cv_wchan;
+	struct spinlock cv_spinlock;
+	#endif
         // add what you need here
         // (don't forget to mark things volatile as needed)
-        struct lock *lock;
-        struct wchan *wchan;
 };
 
 struct cv *cv_create(const char *name);
