@@ -168,5 +168,6 @@ void schedule(void);
  */
 void thread_consider_migration(void);
 
+int last_thread(void);
 
 #endif /* _THREAD_H_ */
