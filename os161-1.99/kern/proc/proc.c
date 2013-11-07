@@ -101,12 +101,9 @@ proc_destroy(struct proc *proc)
 	 * do, some don't.
 	 */
 
-	 kprintf("foooo");
 
 	KASSERT(proc != NULL);
 	KASSERT(proc != kproc);
-
-	kprintf("+++++");
 
 	/*
 	 * We don't take p_lock in here because we must have the only
@@ -120,7 +117,7 @@ proc_destroy(struct proc *proc)
 		proc->p_cwd = NULL;
 	}
 
-	kprintf("----");
+
 
 	/* VM fields */
 	if (proc->p_addrspace) {
@@ -137,15 +134,10 @@ proc_destroy(struct proc *proc)
 		struct addrspace *as;
 
 		as_deactivate();
-		kprintf("looooooo");
 		as = curproc_setas(NULL);
-		kprintf("foooooo");
-
 		as_destroy(as);
-		kprintf("//////");
-
 	}
-	
+
 	threadarray_cleanup(&proc->p_threads);
 	spinlock_cleanup(&proc->p_lock);
 
@@ -285,9 +277,7 @@ curproc_setas(struct addrspace *newas)
 	struct addrspace *oldas;
 	struct proc *proc = curproc;
 
-	kprintf(".....");
 	spinlock_acquire(&proc->p_lock);
-	kprintf("ppppp");
 	oldas = proc->p_addrspace;
 	proc->p_addrspace = newas;
 	spinlock_release(&proc->p_lock);

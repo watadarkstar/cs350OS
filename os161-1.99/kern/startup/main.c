@@ -233,13 +233,9 @@ sys_reboot(int code)
  // man page
  // int exit(int code)
  void sys__exit(int code){
- 	// KASSERT(curthread->t_proc != NULL);
  	// struct proc *proc_temp = curthread->t_proc;
- 	// kprintf("0000");
  	// proc_remthread(curthread);
- 	// kprintf("1111");
  	// proc_destroy(proc_temp);
- 	// kprintf("2222");
  	thread_exit();
  	(void)code;
  }
