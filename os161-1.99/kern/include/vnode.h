@@ -30,6 +30,8 @@
 #ifndef _VNODE_H_
 #define _VNODE_H_
 
+#include <limits.h>
+
 
 struct uio;
 struct stat;
@@ -62,6 +64,15 @@ struct vnode {
 	const struct vnode_ops *vn_ops; /* Functions on this vnode */
 };
 
+
+
+//Couldn't find a better place to put this
+// -Aaron
+typedef struct fd {
+	char name[__PATH_MAX+1];
+	int flag;
+	struct vnode* vfile;
+}fd;
 /*
  * Abstract operations on a vnode.
  *

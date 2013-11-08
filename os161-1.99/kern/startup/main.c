@@ -53,6 +53,9 @@
 #include "opt-A0.h"
 #include "opt-A2.h"
 
+
+
+
 /*
  * These two pieces of data are maintained by the makefiles and build system.
  * buildconfig is the name of the config file the kernel was configured with.
@@ -244,14 +247,7 @@ sys_reboot(int code)
  	(void)code;
  }
 
- int sys_open(userptr_t filename, int flags, int mode, int32_t *retval) {
- 	// TODO Write this
- 	(void)filename;  // suppress warning until code gets written
- 	(void)flags;  // suppress warning until code gets written
- 	(void)mode;  // suppress warning until code gets written
- 	(void)retval;
- 	return 0;
- }
+
 #endif
 
 /*
