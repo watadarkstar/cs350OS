@@ -130,7 +130,7 @@ runprogram(char *progname)
   stackptr -= 4;
   copyout((void *)NULL, (userptr_t)stackptr, (size_t)4);
   stringAddr[argc] = stackptr;
-  for (int i = argc; i >= 0; i--) {
+  for (int i = argc-1; i >= 0; i--) {
     stackptr -= strlen(argv[i]) + 1;
     while (stackptr % 4 != 0) stackptr--;
     copyoutstr(argv[i], (userptr_t)stackptr, (size_t)strlen(argv[i]), NULL);
