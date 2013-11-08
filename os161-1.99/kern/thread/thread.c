@@ -50,10 +50,16 @@
 #include <addrspace.h>
 #include <mainbus.h>
 #include <vnode.h>
+#include "opt-A2.h"
 
 #include "opt-synchprobs.h"
 #include "opt-A2.h"
 
+
+#if OPT_A2
+// Keep track of number of running threads
+static int numthreads;
+#endif
 
 /* Magic number used as a guard value on kernel thread stacks. */
 #define THREAD_STACK_MAGIC 0xbaadf00d
@@ -179,7 +185,7 @@ cpu_create(unsigned hardware_number)
 	if (c == NULL) {
 		panic("cpu_create: Out of memory\n");
 	}
-	
+
 	c->c_self = c;
 	c->c_hardware_number = hardware_number;
 
@@ -392,6 +398,10 @@ thread_bootstrap(void)
 	/* cpu_create() should have set t_proc. */
 	KASSERT(curthread->t_proc != NULL);
 
+#if OPT_A2
+  numthreads = 1;
+#endif
+
 	/* Done */
 }
 
@@ -430,7 +440,7 @@ thread_start_cpus(void)
 
 	cpu_startup_sem = sem_create("cpu_hatch", 0);
 	mainbus_start_cpus();
-	
+
 	for (i=0; i<cpuarray_num(&allcpus) - 1; i++) {
 		P(cpu_startup_sem);
 	}
@@ -441,7 +451,7 @@ thread_start_cpus(void)
 /*
  * Make a thread runnable.
  *
- * targetcpu might be curcpu; it might not be, too. 
+ * targetcpu might be curcpu; it might not be, too.
  */
 static
 void
@@ -538,6 +548,10 @@ thread_fork(const char *name,
 
 	/* Lock the current cpu's run queue and make the new thread runnable */
 	thread_make_runnable(newthread, false);
+
+#if OPT_A2
+  numthreads++;
+#endif
 
 	return 0;
 }
@@ -806,6 +820,9 @@ thread_exit(void)
 
 	/* Interrupts off on this processor */
         splhigh();
+#if OPT_A2
+  numthreads--;
+#endif
 	thread_switch(S_ZOMBIE, NULL);
 	panic("The zombie walks!\n");
 }
@@ -1209,3 +1226,13 @@ interprocessor_interrupt(void)
 	curcpu->c_ipi_pending = 0;
 	spinlock_release(&curcpu->c_ipi_lock);
 }
+
+#if OPT_A2
+int last_thread(void) {
+  int spl, threads;
+  spl = splhigh();
+  threads = numthreads;
+  splx(spl);
+  return (threads == 1);
+}
+#endif
