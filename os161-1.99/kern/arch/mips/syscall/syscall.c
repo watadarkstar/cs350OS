@@ -121,7 +121,7 @@ syscall(struct trapframe *tf)
 	 		// int write(int fd, const void *buf, size_t nbytes)
 			err = sys_write(tf->tf_a0, (const void*)tf->tf_a1, (size_t)tf->tf_a2, &retval);
 			break;
-		case SYS_read
+		case SYS_read:
 			// Signature:
 			// int read(nt fd, void * buf, size_t buflen)
 			err = sys_read(tf->tf_a0, (void*)tf->tf_a1, (size_t)tf->tf_a2, &retval);
