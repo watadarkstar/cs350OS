@@ -202,50 +202,6 @@ sys_reboot(int code)
 	return 0;
 }
 
-#if OPT_A2
-/*
- * A2 Functions
- * TODO: Implement functions here
- *
- */
-
- // man page
- // int write(int fd, const void *buf, size_t nbytes);
- int sys_write(int fd, const void *buf, size_t nbytes, int32_t *retval) {
- 	// #define STDIN_FILENO  0      /* Standard input */
-	// #define STDOUT_FILENO 1      /* Standard output */
-	// #define STDERR_FILENO 2      /* Standard error */
- 	
- 	char *buf_c = (char *)buf;
- 	if (fd == STDOUT_FILENO){
- 		for (unsigned int i = 0; i < nbytes; i++){
- 			kprintf("%c", buf_c[i]);
- 		}
- 	} else {
- 		return EBADF;
- 	}
-
- 	(void)fd;
- 	(void)buf;
- 	(void)nbytes;
- 	(void)retval;
- 	return 0;
- }
-
-
- // man page
- // int exit(int code)
- void sys__exit(int code){
- 	// struct proc *proc_temp = curthread->t_proc;
- 	// proc_remthread(curthread);
- 	// proc_destroy(proc_temp);
- 	thread_exit();
- 	(void)code;
- }
-
-
-#endif
-
 /*
  * Kernel main. Boot up, then fork the menu thread; wait for a reboot
  * request, and then shut down.
