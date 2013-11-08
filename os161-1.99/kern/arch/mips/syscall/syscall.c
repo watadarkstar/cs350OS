@@ -138,7 +138,7 @@ syscall(struct trapframe *tf)
 		case SYS_getpid:
 			// Signature:
 			// pid_t getpid(void)
-			err = sys_close(&retval);
+			err = sys_getpid(&retval);
 			break;
 
 		#endif /* OPT_A2 */
