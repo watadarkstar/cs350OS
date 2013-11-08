@@ -107,7 +107,13 @@ cmd_progthread(void *ptr, unsigned long nargs)
 	strcpy(progname, args[0]);
 
 #if OPT_A2
-  result = runprogram(progname, nargs, args);
+	/* 
+	 TO test execv we can replace this with execv
+	 result = sys_execv(progname, args);
+	 TO revert and run normally use this
+	 result = runprogram(progname, nargs, args);
+	 */
+	result = runprogram(progname, nargs, args);
 #else
 	result = runprogram(progname);
 #endif
