@@ -9,6 +9,9 @@
 #include <kern/unistd.h>
 #include <kern/fcntl.h>
 
+#include "opt-A2.h"
+
+#if OPT_A2
 /*
 	Opens the file, assigns an file descriptor number to it.
 	A lot more error checking can occur here. Some I didn't know how to do,
@@ -76,3 +79,5 @@
 	
  	return 0;
  }
+ #endif
+ 

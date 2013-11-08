@@ -123,7 +123,12 @@ syscall(struct trapframe *tf)
 			// int open(const char *filename, int flags);
 			// int open(const char *filename, int flags, int mode);
 			err = sys_open((userptr_t)tf->tf_a0, tf->tf_a1, tf->tf_a2, &retval);
+		case SYS_close:
+			// MAN File:
+			//int close(int fd)
+			err = sys_close(tf->tf_a0);
 		break;
+		
 		#endif /* OPT_A2 */
  
 	    default:
