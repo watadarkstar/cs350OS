@@ -21,6 +21,28 @@
  int 
  sys_open(userptr_t filename, int flags, int mode, int32_t *retval) {
 
+	//Inits STDIN, STDOUT and STDERR if not already done
+	if(curthread->t_fdlist[STDIN_FILENO] == NULL){
+		int flaglist[3] = {O_RDONLY, O_WRONLY, O_WRONLY};
+		for(int i = 0; i <= STDERR_FILENO; i++){
+			char * console = NULL;
+			struct vnode * vn = (struct vnode *)kmalloc(sizeof(struct vnode));
+			console = kstrdup("con:");
+			int result = vfs_open(console, flaglist[i], 0, &vn);
+			if(result){
+				return result;
+			}
+			
+			struct fd * fid = (struct fd *)kmalloc(sizeof(struct fd));
+			fid->flag = flaglist[i];
+			strcpy(fid->name, console);
+			fid->vfile = vn;
+			curthread->t_fdlist[i] =  fid;
+			
+			kfree(console);
+		}
+	}
+	
 	//If filename is not init'd
 	if(filename == NULL){
 		return EFAULT;
@@ -38,10 +60,6 @@
 	//If filepath is non-existent
 	else if(len == 0){
 		return EFAULT;
-	}
-	//if flag is not readonly, write only or read/write
-	else if((flags & O_RDONLY) != O_RDONLY && (flags & O_WRONLY) != O_WRONLY && (flags & O_RDWR) != O_RDWR){
-		return EINVAL;
 	}
 	//if flag has append attrbiute
 	else if(flags & O_APPEND){
@@ -61,18 +79,18 @@
 		return EMFILE;
 	}
 
-	struct vnode * vn;
+	struct vnode * vn = (struct vnode *)kmalloc(sizeof(struct vnode));
 	int result = vfs_open(fname,flags, mode, &vn);
 	if(result != 0){
 		return result;
 	}
 	
 	//Assign fd to this file
-	struct fd fid;
-	fid.flag = flags;
-	strcpy(fid.name, fname);
-	fid.vfile = vn;
-	curthread->t_fdlist[index] =  &fid;
+	struct fd * fid = (struct fd *)kmalloc(sizeof(struct fd));
+	fid->flag = flags;
+	strcpy(fid->name, fname);
+	fid->vfile = vn;
+	curthread->t_fdlist[index] =  fid;
 
 
 	*retval = index;

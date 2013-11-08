@@ -69,6 +69,7 @@ int sys___time(userptr_t user_seconds, userptr_t user_nanoseconds);
 int sys_open(userptr_t filename, int flags, int mode, int32_t *retval);
 int sys_close(int fd);
 int sys_write(int fd, const void *buf, size_t nbytes, int32_t *retval);
+int sys_read(int fd, void * buf, size_t buflen, int32_t *retval);
 void sys__exit(int code);
 
 // ------------------------------------------------------------------
