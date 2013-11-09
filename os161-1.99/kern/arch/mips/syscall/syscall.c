@@ -37,6 +37,11 @@
 #include <syscall.h>
 #include "opt-A2.h"
 
+#if OPT_A2
+#include <proc.h>
+#include <addrspace.h>
+#endif
+
 
 /*
  * System call dispatcher.
@@ -140,6 +145,13 @@ syscall(struct trapframe *tf)
 			// pid_t getpid(void)
 			err = sys_getpid(&retval);
 			break;
+		case SYS_fork:
+			// Signature:
+			// pid_t fork(void)
+      // Also passing in the trapframe here, need to copy it
+      // to child process
+			err = sys_fork(tf, &retval);
+			break;
 
 		#endif /* OPT_A2 */
 
@@ -187,7 +199,36 @@ syscall(struct trapframe *tf)
  * Thus, you can trash it and do things another way if you prefer.
  */
 void
+#if OPT_A2
+enter_forked_process(void *tf, unsigned long as) {
+  // Cast tf as trapframe
+  struct trapframe *tfr;
+  tfr = (struct trapframe *)tf;
+
+  // Need to change as to an addrspace struct
+  struct addrspace *addrs;
+  addrs = (struct addrspace *)as;
+
+  // Modify trapframe to indicate success
+  tfr->tf_a3 = 0;
+  tfr->tf_v0 = 0;
+
+  // Increment PC or else this thread will call fork again
+  tfr->tf_epc += 4;
+
+  // Activate new addrspace
+  curproc_setas(addrs);
+  as_activate();
+
+  // Enter user mode with modified trapframe
+  struct trapframe newstack;
+  newstack = *tfr;
+  mips_usermode(&newstack);
+
+}
+#else
 enter_forked_process(struct trapframe *tf)
 {
 	(void)tf;
 }
+#endif

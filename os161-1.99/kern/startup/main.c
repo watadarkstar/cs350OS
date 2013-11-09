@@ -53,6 +53,10 @@
 #include "opt-A0.h"
 #include "opt-A2.h"
 
+#if OPT_A2
+#include <limits.h>
+#endif
+
 
 
 
@@ -99,6 +103,12 @@ boot(void)
 	 * anything at all. You can make it larger though (it's in
 	 * dev/generic/console.c).
 	 */
+
+#if OPT_A2
+  // Not sure if this is the best place to put this, but I'm not
+  // sure where else we can initialize our process array early enough
+  proc_array_init();
+#endif
 
 	kprintf("\n");
 	kprintf("OS/161 base system version %s\n", BASE_VERSION);

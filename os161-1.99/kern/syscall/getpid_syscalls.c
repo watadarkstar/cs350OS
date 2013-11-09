@@ -15,10 +15,10 @@
 /*
   Returns process id of the current process
 */
- pid_t
- sys_getpid(int32_t *retval) {
-    *retval = curproc->pid;
-    return 0;
- }
+int
+sys_getpid(int32_t *retval) {
+  *retval = curproc->pid;
+  return 0;
+}
 #endif
 

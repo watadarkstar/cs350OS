@@ -47,16 +47,28 @@
 #include <current.h>
 #include <addrspace.h>
 #include <vnode.h>
+#include "opt-A2.h"
 
 /*
  * The process for the kernel; this holds all the kernel-only threads.
  */
 struct proc *kproc;
 
+#if OPT_A2
+/*
+ * Global array of all running processes
+ */
+static struct proc *p_array[__PID_MAX+1];
+#endif
+
 /*
  * Create a proc structure.
  */
+#if OPT_A2
+// For sys_fork we decided to expose proc_create
+#else
 static
+#endif
 struct proc *
 proc_create(const char *name)
 {
@@ -80,6 +92,18 @@ proc_create(const char *name)
 
 	/* VFS fields */
 	proc->p_cwd = NULL;
+
+#if OPT_A2
+  /* Finds first available pid and assigns it */
+  for (int i = __PID_MIN; i < __PID_MAX; i++) {
+    if (p_array[i] != NULL) {
+      proc->pid = i;
+      p_array[i] = proc;
+      break;
+    }
+  }
+
+#endif
 
 	return proc;
 }
@@ -137,6 +161,11 @@ proc_destroy(struct proc *proc)
 		as = curproc_setas(NULL);
 		as_destroy(as);
 	}
+
+#if OPT_A2
+  /* Release PID */
+  p_array[proc->pid] = NULL;
+#endif
 
 	threadarray_cleanup(&proc->p_threads);
 	spinlock_cleanup(&proc->p_lock);
@@ -283,3 +312,14 @@ curproc_setas(struct addrspace *newas)
 	spinlock_release(&proc->p_lock);
 	return oldas;
 }
+
+#if OPT_A2
+/*
+ * Initialize the process array
+ */
+void proc_array_init() {
+  for (int i = 0; i < __PID_MAX; i++) {
+    p_array[i] = NULL;
+  }
+}
+#endif
