@@ -1,44 +1,70 @@
 #include <types.h>
-#include <kern/errno.h>
-#include <kern/reboot.h>
-#include <kern/unistd.h>
-#include <lib.h>
-#include <spl.h>
-#include <clock.h>
 #include <thread.h>
 #include <proc.h>
+#include <uio.h>
 #include <current.h>
-#include <synch.h>
-#include <vm.h>
-#include <mainbus.h>
 #include <vfs.h>
-#include <device.h>
+#include <vnode.h>
 #include <syscall.h>
-#include <test.h>
-#include <version.h>
-#include "autoconf.h"  // for pseudoconfig
-#include "opt-A0.h"
+#include <kern/errno.h> 
+#include <kern/unistd.h>
+#include <kern/fcntl.h>
+
+#include <copyinout.h>
+
 #include "opt-A2.h"
 
-// man page
-// int write(int fd, const void *buf, size_t nbytes);
-int sys_write(int fd, const void *buf, size_t nbytes, int32_t *retval) {
-	// #define STDIN_FILENO  0      /* Standard input */
-	// #define STDOUT_FILENO 1      /* Standard output */
-	// #define STDERR_FILENO 2      /* Standard error */
+#if OPT_A2
+/*
+	Writes up to buflen characters into buffer.
+	-Aaron
+*/
+ int 
+ sys_write(int fd, const void * buf, size_t buflen, int32_t *retval) { 
+
+	//Inits STDIN, STDOUT and STDERR if not already done
+	if(curthread->t_fdlist[STDIN_FILENO] == NULL){
+		init_STD();
+	}
 	
-	char *buf_c = (char *)buf;
-	if (fd == STDOUT_FILENO){
-		for (unsigned int i = 0; i < nbytes; i++){
-			kprintf("%c", buf_c[i]);
-		}
-	} else {
+	if(fd < 0 || fd > __OPEN_MAX){
 		return EBADF;
 	}
+	struct fd ** cur_fd = NULL;
+	cur_fd = &(curthread->t_fdlist[fd]);
+		
+	if(cur_fd == NULL){
+		return EBADF;
+	}
+	
+	//Causing dem errors
+	// else if(((*cur_fd)->flag & O_WRONLY) != O_WRONLY || ((*cur_fd)->flag & O_RDWR) != O_RDWR){
+		// return EBADF;
+	// }
+	
+	struct iovec iov;
+	struct uio u;
+	struct vnode * vn =  (*cur_fd)->vfile;
+	int result;
 
-	(void)fd;
-	(void)buf;
-	(void)nbytes;
-	(void)retval;
-	return 0;
-}
+
+	void * buffer = kmalloc(sizeof (*buf) * buflen);
+	result = copyin(buf, buffer, buflen);
+	
+	if(result){
+		return EFAULT;
+	}	
+	
+	uio_kinit(&iov, &u, buffer, buflen, 0, UIO_WRITE);
+	
+	result = VOP_WRITE(vn, &u);
+	if(result) {
+		return result;
+	}
+	*retval = u.uio_resid;
+
+ 	return 0;
+ }
+ #endif 
+
+ 
