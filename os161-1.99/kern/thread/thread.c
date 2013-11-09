@@ -157,11 +157,6 @@ thread_create(const char *name)
 	thread->t_iplhigh_count = 1; /* corresponding to t_curspl */
 
 	/* If you add to struct thread, be sure to initialize here */
-	#if OPT_A2
-		for(int i = 0; i < __OPEN_MAX; i++){
-			thread->t_fdlist[i] = NULL;
-		}
-	#endif
 
 	return thread;
 }
@@ -258,11 +253,6 @@ thread_destroy(struct thread *thread)
 	 * If you add things to struct thread, be sure to clean them up
 	 * either here or in thread_exit(). (And not both...)
 	 */
-	 #if OPT_A2
-	for(int i =0; i < __OPEN_MAX; i++){
-		kfree(thread->t_fdlist[i]);
-	}
-	#endif
 
 	/* Thread subsystem fields */
 	KASSERT(thread->t_proc == NULL);

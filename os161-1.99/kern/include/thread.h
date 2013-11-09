@@ -42,7 +42,6 @@
 #include <vnode.h>
 
 #include <limits.h>
-#include "opt-A2.h"
 
 struct cpu;
 
@@ -111,10 +110,6 @@ struct thread {
 
 	/* add more here as needed */
 	
-	
-	#if OPT_A2
-	struct fd * t_fdlist[__OPEN_MAX];
-	#endif
 };
 
 /*
