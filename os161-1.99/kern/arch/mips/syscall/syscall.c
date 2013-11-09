@@ -140,6 +140,7 @@ syscall(struct trapframe *tf)
 			// Signature:
 			// int close(int fd)
 			err = sys_close(tf->tf_a0);
+			break;
 		case SYS_getpid:
 			// Signature:
 			// pid_t getpid(void)
@@ -152,7 +153,9 @@ syscall(struct trapframe *tf)
       // to child process
 			err = sys_fork(tf, &retval);
 			break;
-
+		case SYS_execv:
+			err = sys_execv((char*)tf->tf_a0, (char **)tf->tf_a1);
+			break;
 		#endif /* OPT_A2 */
 
 	    default:

@@ -17,7 +17,6 @@
 */
  int 
  sys_close(int fd) {
-
 	//If fid is STDIN, STDOUT or STDERR, or if above max number of files
 	if(fd < 3 || fd > __OPEN_MAX){
 		return EBADF;
@@ -28,8 +27,8 @@
 	}
 	
 	vfs_close(curthread->t_fdlist[fd]->vfile);
+	curthread->t_fdlist[fd]->vfile = NULL;
 	curthread->t_fdlist[fd] = NULL;
-	
 	return 0;
 }
 #endif

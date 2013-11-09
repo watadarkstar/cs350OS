@@ -110,8 +110,10 @@ struct thread {
 	 */
 
 	/* add more here as needed */
+	
+	
 	#if OPT_A2
-	struct fd * t_fdlist[OPEN_MAX];
+	struct fd * t_fdlist[__OPEN_MAX];
 	#endif
 };
 

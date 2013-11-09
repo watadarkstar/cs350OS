@@ -23,50 +23,31 @@
 
 	//Inits STDIN, STDOUT and STDERR if not already done
 	if(curthread->t_fdlist[STDIN_FILENO] == NULL){
-		int flaglist[3] = {O_RDONLY, O_WRONLY, O_WRONLY};
-		for(int i = 0; i <= STDERR_FILENO; i++){
-			char * console = NULL;
-			struct vnode * vn = (struct vnode *)kmalloc(sizeof(struct vnode));
-			console = kstrdup("con:");
-			int result = vfs_open(console, flaglist[i], 0, &vn);
-			if(result){
-				return result;
-			}
-			
-			struct fd * fid = (struct fd *)kmalloc(sizeof(struct fd));
-			fid->flag = flaglist[i];
-			strcpy(fid->name, console);
-			fid->vfile = vn;
-			curthread->t_fdlist[i] =  fid;
-			
-			kfree(console);
-		}
+		init_STD();
 	}
 	
-	//If filename is not init'd
+	// If filename is not init'd
 	if(filename == NULL){
 		return EFAULT;
 	}
-	
 	char fname[__PATH_MAX+1];
 	size_t len;
 	int index = -1;
 	int err = copyinstr(filename, fname, __PATH_MAX, &len);
-	
-	//if copy fails
+	// if copy fails
 	if(err != 0){
 		return EFAULT;
 	}
-	//If filepath is non-existent
+	// If filepath is non-existent
 	else if(len == 0){
 		return EFAULT;
 	}
-	//if flag has append attrbiute
+	// if flag has append attrbiute
 	else if(flags & O_APPEND){
 		return EINVAL;
 	}
 	
-	//Finds first unitilized fd
+	// Finds first unitilized fd
 	for(int i = 3; i < __OPEN_MAX; i++){
 		if(curthread->t_fdlist[i] == NULL){
 			index = i;
@@ -74,7 +55,7 @@
 		}
 	}
 
-	//if there was no empty fd
+	// if there was no empty fd
 	if(index == -1){
 		return EMFILE;
 	}
@@ -85,7 +66,7 @@
 		return result;
 	}
 	
-	//Assign fd to this file
+	// Assign fd to this file
 	struct fd * fid = (struct fd *)kmalloc(sizeof(struct fd));
 	fid->flag = flags;
 	strcpy(fid->name, fname);
@@ -93,9 +74,29 @@
 	curthread->t_fdlist[index] =  fid;
 
 
-	*retval = index;
-	
+	*retval = index;	
  	return 0;
  }
+ 
+ /* Used to initilize STDIN, STDOUT and STDERR.
+    Must be run before any other filesystem call is done, as these are always supposed to be open
+ */
+  void init_STD(){
+	int flaglist[3] = {O_RDONLY, O_WRONLY, O_WRONLY};
+	for(int i = 0; i <= STDERR_FILENO; i++){
+		char * console = NULL;
+		struct vnode * vn = kmalloc(sizeof(struct vnode));
+		console = kstrdup("con:");
+		vfs_open(console, flaglist[i], 0, &vn);
+		
+		struct fd * fid = kmalloc(sizeof(struct fd));
+		fid->flag = flaglist[i];
+		strcpy(fid->name, console);
+		fid->vfile = vn;
+		curthread->t_fdlist[i] =  fid;
+		
+		kfree(console);
+	}
+}
  #endif
  
