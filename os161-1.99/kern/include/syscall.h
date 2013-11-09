@@ -71,6 +71,7 @@ void init_STD(void); //Aaron - Used to initilize STDIN, STDOUT and STDERR. Can't
 int sys_close(int fd);
 int sys_write(int fd, const void *buf, size_t nbytes, int32_t *retval);
 int sys_read(int fd, void * buf, size_t buflen, int32_t *retval);
+int sys_execv(char *program, char **args);
 void sys__exit(int code);
 pid_t sys_getpid(int32_t *retval);
 
