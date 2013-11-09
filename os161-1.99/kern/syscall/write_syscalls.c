@@ -9,7 +9,6 @@
 #include <kern/errno.h> 
 #include <kern/unistd.h>
 #include <kern/fcntl.h>
-
 #include <copyinout.h>
 
 #include "opt-A2.h"
@@ -23,41 +22,43 @@
  sys_write(int fd, const void * buf, size_t buflen, int32_t *retval) { 
 
 	//Inits STDIN, STDOUT and STDERR if not already done
-	if(curthread->t_fdlist[STDIN_FILENO] == NULL){
+	if(curproc->p_fdlist[STDIN_FILENO] == NULL){
 		init_STD();
 	}
 	
+	//if fd is an invalid number
 	if(fd < 0 || fd > __OPEN_MAX){
 		return EBADF;
 	}
 	struct fd ** cur_fd = NULL;
-	cur_fd = &(curthread->t_fdlist[fd]);
-		
+	cur_fd = &(curproc->p_fdlist[fd]);
+	
+	//if fd points to a closed file
 	if(cur_fd == NULL){
 		return EBADF;
 	}
-	
-	//Causing dem errors
-	// else if(((*cur_fd)->flag & O_WRONLY) != O_WRONLY || ((*cur_fd)->flag & O_RDWR) != O_RDWR){
-		// return EBADF;
-	// }
+	//if file does not have write privileges
+	else if(((*cur_fd)->fd_flag & O_WRONLY) != O_WRONLY && ((*cur_fd)->fd_flag & O_RDWR) != O_RDWR){
+		return EBADF;
+	 }
 	
 	struct iovec iov;
 	struct uio u;
-	struct vnode * vn =  (*cur_fd)->vfile;
+	struct vnode * vn =  (*cur_fd)->fd_vfile;
 	int result;
 
-
-	void * buffer = kmalloc(sizeof (*buf) * buflen);
+	//copy const buf into a non const buf
+	void * buffer = kmalloc(sizeof(buf));
 	result = copyin(buf, buffer, buflen);
 	
 	if(result){
 		return EFAULT;
 	}	
 	
+	//Write to file
 	uio_kinit(&iov, &u, buffer, buflen, 0, UIO_WRITE);
-	
 	result = VOP_WRITE(vn, &u);
+	
 	if(result) {
 		return result;
 	}

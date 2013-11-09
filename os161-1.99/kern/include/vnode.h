@@ -66,13 +66,13 @@ struct vnode {
 
 
 
-//Couldn't find a better place to put this
+// Couldn't find a better place to put this
 // -Aaron
-typedef struct fd {
-	char name[__PATH_MAX+1];
-	int flag;
-	struct vnode* vfile;
-}fd;
+// typedef struct fd {
+	// char name[__PATH_MAX+1];
+	// int flag;
+	// struct vnode* vfile;
+// }fd;
 /*
  * Abstract operations on a vnode.
  *

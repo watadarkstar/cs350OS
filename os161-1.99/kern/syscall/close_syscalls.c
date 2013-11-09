@@ -22,13 +22,13 @@
 		return EBADF;
 	}
 	//If fid refers to an already closed file, just return success. 
-	else if(curthread->t_fdlist[fd] == NULL){
+	else if(curproc->p_fdlist[fd] == NULL){
 		return 0;
 	}
 	
-	vfs_close(curthread->t_fdlist[fd]->vfile);
-	curthread->t_fdlist[fd]->vfile = NULL;
-	curthread->t_fdlist[fd] = NULL;
+	vfs_close(curproc->p_fdlist[fd]->fd_vfile);
+	curproc->p_fdlist[fd]->fd_vfile = NULL;
+	curproc->p_fdlist[fd] = NULL;
 	return 0;
 }
 #endif

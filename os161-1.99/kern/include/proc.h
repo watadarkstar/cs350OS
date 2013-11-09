@@ -58,10 +58,20 @@ struct proc {
 	struct vnode *p_cwd;		/* current working directory */
 
 	/* add more material here as needed */
-#if OPT_A2
-  pid_t pid;
-#endif
+	#if OPT_A2
+	pid_t pid;
+	struct fd * p_fdlist[__OPEN_MAX];
+	#endif
 };
+
+//Couldn't find a better place to put this
+// -Aaron
+typedef struct fd {
+	int fd_fid;
+	char fd_name[__PATH_MAX+1];
+	int fd_flag;
+	struct vnode* fd_vfile;
+}fd;
 
 /* This is the process structure for the kernel and for kernel-only threads. */
 extern struct proc *kproc;

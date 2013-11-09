@@ -48,6 +48,8 @@
 #include <addrspace.h>
 #include <vnode.h>
 
+#include "opt-A2.h"
+
 /*
  * The process for the kernel; this holds all the kernel-only threads.
  */
@@ -80,6 +82,12 @@ proc_create(const char *name)
 
 	/* VFS fields */
 	proc->p_cwd = NULL;
+	
+	#if OPT_A2
+	for(int i = 0; i < __OPEN_MAX; i++){
+		proc->p_fdlist[i] = NULL;
+	}
+	#endif
 
 	return proc;
 }
@@ -117,6 +125,11 @@ proc_destroy(struct proc *proc)
 		proc->p_cwd = NULL;
 	}
 
+	#if OPT_A2
+	for(int i =0; i < __OPEN_MAX; i++){
+		kfree(proc->p_fdlist[i]);
+	}
+	#endif
 
 
 	/* VM fields */
