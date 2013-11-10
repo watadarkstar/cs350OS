@@ -103,10 +103,10 @@ proc_create(const char *name)
 #if OPT_A2
   /* Finds first available pid and assigns it */
   for (int i = __PID_MIN; i < __PID_MAX; i++) {
-    if (p_array[i] != NULL) {
+    if (p_array[i] == NULL) {
       proc->pid = i;
 	  
-	  struct pd * pid = kmalloc(sizeof(struct pd));
+	  struct pd * pid = (struct pd *)kmalloc(sizeof(struct pd));
 	  pid->pd_pid = i;
 	  pid->pd_exiting = false;
 	  pid->pd_exitcode = 0;

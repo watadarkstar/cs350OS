@@ -50,7 +50,7 @@ sys_fork(struct trapframe *tf, int32_t *retval) {
 
   // Create new process
   struct proc *new_proc = proc_create(curproc->p_name);
-
+  set_parent(curproc->pid, new_proc->pid);
   // Fork new thread, attach to new proc
   result = thread_fork("Child process", new_proc, enter_forked_process, (void *)child_tf, (unsigned long)new_as);
   if (result) {
@@ -60,7 +60,7 @@ sys_fork(struct trapframe *tf, int32_t *retval) {
   }
 
   //Child process needs to have parent pid attached to it
-  set_parent(curproc->pid, new_proc->pid);
+
 
 
   // Set retval to child process pid
