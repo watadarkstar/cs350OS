@@ -41,15 +41,14 @@
  * Unless you're implementing multithreaded user processes, the only
  * process that will have more than one thread is the kernel process.
  */
-
 #include <types.h>
 #include <proc.h>
 #include <current.h>
 #include <addrspace.h>
 #include <vnode.h>
 #include "opt-A2.h"
+#include <kern/errno.h>
 
-#include "opt-A2.h"
 
 /*
  * The process for the kernel; this holds all the kernel-only threads.
@@ -60,7 +59,7 @@ struct proc *kproc;
 /*
  * Global array of all running processes
  */
-static struct proc *p_array[__PID_MAX+1];
+static struct pd * p_array[__PID_MAX+1];
 #endif
 
 /*
@@ -106,7 +105,15 @@ proc_create(const char *name)
   for (int i = __PID_MIN; i < __PID_MAX; i++) {
     if (p_array[i] != NULL) {
       proc->pid = i;
-      p_array[i] = proc;
+	  
+	  struct pd * pid = kmalloc(sizeof(struct pd));
+	  pid->pd_pid = i;
+	  pid->pd_exiting = false;
+	  pid->pd_exitcode = 0;
+	  pid->pd_lock = lock_create("lock");
+	  pid->pd_cv = cv_create("lock");
+      p_array[i] = pid;
+	  
       break;
     }
   }
@@ -334,5 +341,57 @@ void proc_array_init() {
   for (int i = 0; i < __PID_MAX; i++) {
     p_array[i] = NULL;
   }
+}
+
+int valid_pid(pid_t pid){
+	if(pid < 0 || pid > __PID_MAX){
+		return ESRCH;
+	}
+	else if(p_array[pid] == NULL){
+		return ESRCH;
+	}
+	else if(p_array[pid]->pd_parent_pid == curproc->pid){
+		return ECHILD;
+	}
+	else{
+		return 0;
+	}
+}
+
+//Returns true if process is exiting
+bool has_exit_code(pid_t pid){
+	return p_array[pid]->pd_exiting;
+}
+
+void acquire_lock(pid_t pid){
+	lock_acquire(p_array[pid]->pd_lock);
+}
+void release_lock(pid_t pid){
+	lock_release(p_array[pid]->pd_lock);
+}
+void put_to_sleep(pid_t pid){
+	cv_wait(p_array[pid]->pd_cv, p_array[pid]->pd_lock);
+}
+
+void wake_up(pid_t pid){
+	cv_signal(p_array[pid]->pd_cv, p_array[pid]->pd_lock);
+}
+
+void set_exit_code(int exit_code){
+	pid_t pid = curproc->pid;
+	p_array[pid]->pd_exitcode = exit_code;
+	p_array[pid]->pd_exiting = true;
+}
+int get_exit_code(pid_t pid){
+	return p_array[pid]->pd_exitcode;
+}
+void set_parent(pid_t parent, pid_t child){
+	p_array[child]->pd_parent_pid = parent;
+}
+//Used to release the pid from the process array
+void release_pid(pid_t pid){
+	cv_destroy(p_array[pid]->pd_cv);
+	lock_destroy(p_array[pid]->pd_lock);
+	p_array[pid] = NULL;
 }
 #endif

@@ -71,7 +71,8 @@ int sys___time(userptr_t user_seconds, userptr_t user_nanoseconds);
 // int open(const char *filename, int flags);
 // int open(const char *filename, int flags, int mode);
 int sys_open(userptr_t filename, int flags, int mode, int32_t *retval);
-void init_STD(void); //Aaron - Used to initilize STDIN, STDOUT and STDERR. Can't attach it to thread_create, unfortunately. 
+void init_STD(void); //Aaron - Used to initilize STDIN, STDOUT and STDERR. Can't attach it to thread_create, unfortunately.
+//No longer in thread.... but I doubt it'll work in proc_create. 
 int sys_close(int fd);
 int sys_write(int fd, const void *buf, size_t nbytes, int32_t *retval);
 int sys_read(int fd, void * buf, size_t buflen, int32_t *retval);
@@ -79,6 +80,7 @@ int sys_execv(char *program, char **args);
 void sys__exit(int code);
 int sys_getpid(int32_t *retval);
 int sys_fork(struct trapframe *tf, int32_t *retval);
+pid_t sys_waitpid(pid_t pid, int * status, int options, int * retval);
 
 // ------------------------------------------------------------------
 #endif

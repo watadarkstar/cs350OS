@@ -44,6 +44,9 @@ sys_fork(struct trapframe *tf, int32_t *retval) {
     kfree(child_tf);
     return result;  // Error code will be returned from thread_fork
   }
+  
+  //Child process needs to have parent pid attached to it
+  set_parent(curproc->pid, new_proc->pid);
 
 
   // Set retval to child process pid

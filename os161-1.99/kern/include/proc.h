@@ -38,6 +38,8 @@
 
 #include <spinlock.h>
 #include <thread.h> /* required for struct threadarray */
+#include <wchan.h>
+#include <synch.h>
 #include "opt-A2.h"
 
 struct addrspace;
@@ -73,6 +75,15 @@ typedef struct fd {
 	struct vnode* fd_vfile;
 }fd;
 
+typedef struct pd {
+	pid_t pd_parent_pid;
+	pid_t pd_pid;
+	int pd_exitcode;
+	bool pd_exiting;
+	struct cv * pd_cv;
+	struct lock * pd_lock;
+} pd;
+
 /* This is the process structure for the kernel and for kernel-only threads. */
 extern struct proc *kproc;
 
@@ -100,6 +111,24 @@ struct addrspace *curproc_setas(struct addrspace *);
 #if OPT_A2
 /* Initialize global process array */
 void proc_array_init(void);
+//Releases pids, so it can be used again
+void release_pid(pid_t pid);
+//Sets parent pid on child proc
+void set_parent(pid_t parent, pid_t child);
+//Checks for valid pid
+int valid_pid(pid_t pid);
+//Checks if an exit code exists
+bool has_exit_code(pid_t pid);
+//Returns exit code
+int get_exit_code(pid_t pid);
+//Sets exit code
+void set_exit_code(int exit_code);
+// Puts parent thread to sleep. Goodnight
+void put_to_sleep(pid_t pid);
+// Wakes parents up once child is done
+void wake_up(pid_t pid);
+void release_lock(pid_t pid);
+void acquire_lock(pid_t pid);
 
 /* Exposing proc_create for the sake of sys_fork */
 struct proc *proc_create(const char *name);
