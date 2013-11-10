@@ -51,6 +51,15 @@ sys_fork(struct trapframe *tf, int32_t *retval) {
   // Create new process
   struct proc *new_proc = proc_create(curproc->p_name);
 
+  // Copy process fdlist
+  for (int i = 0; i < __OPEN_MAX; i++) {
+    if (curproc->p_fdlist[i] != NULL) {
+      new_proc->p_fdlist[i] = curproc->p_fdlist[i];
+      // Increment reference count
+      new_proc->p_fdlist[i]->fd_vfile->vn_refcount++;
+    }
+  }
+
   //Child process needs to have parent pid attached to it
   set_parent(curproc->pid, new_proc->pid);
 
