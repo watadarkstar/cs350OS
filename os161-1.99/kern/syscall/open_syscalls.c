@@ -41,7 +41,7 @@
 		return EFAULT;
 	}
 	// If filepath is non-existent
-	else if(len == 0){
+	else if(len == 0 || len > __PATH_MAX+1){
 		return EFAULT;
 	}
 	// if flag has append attrbiute
