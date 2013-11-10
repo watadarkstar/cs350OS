@@ -28,7 +28,8 @@ void sys__exit(int code){
 	// proc_destroy(proc_temp);
 	/* This causes the err in ftest */
 	set_exit_code(code);
-	//wake_up(curproc->pid);
+	acquire_lock(curproc->pid);
+	wake_up(curproc->pid);
 	thread_exit();
 	(void)code;
 }

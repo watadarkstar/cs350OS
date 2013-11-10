@@ -111,6 +111,7 @@ proc_create(const char *name)
 	  pid->pd_exiting = false;
 	  pid->pd_exitcode = 0;
 	  pid->pd_lock = lock_create("lock");
+	  
 	  pid->pd_cv = cv_create("lock");
       p_array[i] = pid;
 	  
