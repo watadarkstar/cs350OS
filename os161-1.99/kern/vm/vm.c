@@ -10,9 +10,9 @@
 #include <lib.h>
 #include <addrspace.h>
 #include <vm.h>
-#include <addrspace.h>
 
 #if OPT_A3
+#include <addrspace.h>
 #include "opt-A3.h"
 #include <kern/errno.h>
 #include <proc.h>

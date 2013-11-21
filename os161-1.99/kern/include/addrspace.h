@@ -37,7 +37,6 @@
 
 #include <vm.h>
 #include "opt-dumbvm.h"
-#include "opt-A3.h"
 
 struct vnode;
 
@@ -58,9 +57,10 @@ struct addrspace {
         paddr_t as_pbase2;
         size_t as_npages2;
         paddr_t as_stackpbase;
-#else
+#elif OPT_A3
         /* Put stuff here for your VM system */
         // based on dumbvm code
+        #include "opt-A3.h"
         vaddr_t as_vbase1;
         paddr_t as_pbase1;
         size_t as_npages1;
