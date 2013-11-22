@@ -61,7 +61,6 @@ struct addrspace {
 #elif OPT_A3
         /* Put stuff here for your VM system */
         // based on dumbvm code
-        #include "opt-A3.h"
         vaddr_t as_vbase1;
         paddr_t as_pbase1;
         size_t as_npages1;
