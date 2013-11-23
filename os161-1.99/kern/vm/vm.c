@@ -40,6 +40,21 @@ getppages(unsigned long npages)
 }
 #endif
 
+#if OPT_A3
+
+static unsigned int next_victim = 0;// we probably want a lock for this
+/* Round robin function for A3 */
+int
+tlb_get_rr_victim() 
+{
+	int victim;
+	victim = next_victim;
+	next_victim = (next_victim + 1) % NUM_TLB;
+	return victim;
+}
+
+#endif
+
 /* Allocate/free some kernel-space virtual pages */
 vaddr_t 
 alloc_kpages(int npages)
@@ -91,6 +106,7 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 		uint32_t ehi, elo;
 		struct addrspace *as;
 		int spl;
+		int victim;
 
 		faultaddress &= PAGE_FRAME;
 
@@ -146,6 +162,9 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 		stackbase = USERSTACK - DUMBVM_STACKPAGES * PAGE_SIZE;
 		stacktop = USERSTACK;
 
+		/* New TLB Management stuff for victim eviction */
+		victim = tlb_get_rr_victim();
+
 		if (faultaddress >= vbase1 && faultaddress < vtop1) {
 			paddr = (faultaddress - vbase1) + as->as_pbase1;
 		}
@@ -165,6 +184,7 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 		/* Disable interrupts on this CPU while frobbing the TLB. */
 		spl = splhigh();
 
+		/* This checks for invalid entries and writes the first invalid entry found */
 		for (i=0; i<NUM_TLB; i++) {
 			tlb_read(&ehi, &elo, i);
 			if (elo & TLBLO_VALID) {
@@ -178,9 +198,17 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 			return 0;
 		}
 
-		kprintf("dumbvm: Ran out of TLB entries - cannot handle page fault\n");
+		/* In the case that there are no invalid entries we must evict one and replace it */
+		/* We use the round robin method to choose our victim to evict */
+		ehi = faultaddress;
+		elo = paddr | TLBLO_DIRTY | TLBLO_VALID;
+		i = tlb_get_rr_victim();
+		tlb_write(ehi, elo, i);
 		splx(spl);
-		return EFAULT;
+
+		// kprintf("dumbvm: Ran out of TLB entries - cannot handle page fault\n");
+		// return EFAULT;
+		return 0;
 	#else
 		/* Adapt code form dumbvm or implement something new */
 		(void)faulttype;
