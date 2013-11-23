@@ -184,7 +184,7 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 		/* Disable interrupts on this CPU while frobbing the TLB. */
 		spl = splhigh();
 
-		/* This checks for invalid entries and writes the first invalid entry found */
+		/* Adrian: This checks for invalid entries and writes the first invalid entry found */
 		for (i=0; i<NUM_TLB; i++) {
 			tlb_read(&ehi, &elo, i);
 			if (elo & TLBLO_VALID) {
@@ -198,7 +198,7 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 			return 0;
 		}
 
-		/* In the case that there are no invalid entries we must evict one and replace it */
+		/* Adrian: In the case that there are no invalid entries we must evict one and replace it */
 		/* We use the round robin method to choose our victim to evict */
 		ehi = faultaddress;
 		elo = paddr | TLBLO_DIRTY | TLBLO_VALID;
