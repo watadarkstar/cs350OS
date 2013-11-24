@@ -52,6 +52,8 @@
 #include "autoconf.h"  // for pseudoconfig
 #include "opt-A0.h"
 #include "opt-A2.h"
+#include "opt-A3.h"
+#include "uw-vmstats.h"
 
 #if OPT_A2
 #include <limits.h>
@@ -143,6 +145,9 @@ boot(void)
 	/* Default bootfs - but ignore failure, in case emu0 doesn't exist */
 	vfs_setbootfs("emu0");
 
+	#if OPT_A3
+	vmstats_init();
+	#endif
 
 	/*
 	 * Make sure various things aren't screwed up.
@@ -158,7 +163,10 @@ static
 void
 shutdown(void)
 {
-
+	#if OPT_A3
+	vmstats_print();
+	#endif
+	
 	kprintf("Shutting down.\n");
 
 	vfs_clearbootfs();
