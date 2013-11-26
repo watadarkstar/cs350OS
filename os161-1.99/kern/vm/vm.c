@@ -20,6 +20,7 @@
 #include <spl.h>
 #include <mips/tlb.h>
 #include <uw-vmstats.h>
+#include <syscall.h>
 #endif
 
 void
@@ -108,6 +109,7 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 		struct addrspace *as;
 		int spl;
 		int victim;
+		bool readonly = false; 
 
 		faultaddress &= PAGE_FRAME;
 
@@ -115,8 +117,9 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 
 		switch (faulttype) {
 		    case VM_FAULT_READONLY:
-			/* We always create pages read-write, so we can't get this */
-			panic("dumbvm: got VM_FAULT_READONLY\n");
+				kprintf("VM_FAULT_READONLY - exiting...\n");
+				splx(spl);
+				sys__exit(0);
 		    case VM_FAULT_READ:
 		    case VM_FAULT_WRITE:
 			break;
@@ -167,6 +170,7 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 		victim = tlb_get_rr_victim();
 
 		if (faultaddress >= vbase1 && faultaddress < vtop1) {
+			readonly = true;
 			paddr = (faultaddress - vbase1) + as->as_pbase1;
 		}
 		else if (faultaddress >= vbase2 && faultaddress < vtop2) {
@@ -195,7 +199,11 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 				continue;
 			}
 			ehi = faultaddress;
-			elo = paddr | TLBLO_DIRTY | TLBLO_VALID;
+			if (readonly) {
+				elo = paddr | TLBLO_VALID;
+			} else {
+				elo = paddr | TLBLO_DIRTY | TLBLO_VALID;
+			}
 			DEBUG(DB_VM, "dumbvm: 0x%x -> 0x%x\n", faultaddress, paddr);
 			tlb_write(ehi, elo, i);
 			/* track stats for tlb fault free */
@@ -207,7 +215,11 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 		/* Adrian: In the case that there are no invalid entries we must evict one and replace it */
 		/* We use the round robin method to choose our victim to evict */
 		ehi = faultaddress;
-		elo = paddr | TLBLO_DIRTY | TLBLO_VALID;
+		if (readonly) {
+			elo = paddr | TLBLO_VALID;
+		} else {
+			elo = paddr | TLBLO_DIRTY | TLBLO_VALID;
+		}
 		i = tlb_get_rr_victim();
 		tlb_write(ehi, elo, i);
 		/* track stats for tlb fault replace */
