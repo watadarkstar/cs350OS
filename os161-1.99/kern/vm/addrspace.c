@@ -39,6 +39,7 @@
 #include "opt-A3.h"
 #include <spl.h>
 #include <mips/tlb.h>
+#include <uw-vmstats.h>
 #endif
 
 
@@ -204,6 +205,9 @@ as_activate(void)
 		for (i=0; i<NUM_TLB; i++) {
 			tlb_write(TLBHI_INVALID(i), TLBLO_INVALID(), i);
 		}
+
+		/* track stats for tlb invalidations */
+		vmstats_inc(VMSTAT_TLB_INVALIDATE);
 
 		splx(spl);
 	#else

@@ -19,6 +19,7 @@
 #include <current.h>
 #include <spl.h>
 #include <mips/tlb.h>
+#include <uw-vmstats.h>
 #endif
 
 void
@@ -184,6 +185,9 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 		/* Disable interrupts on this CPU while frobbing the TLB. */
 		spl = splhigh();
 
+		/* track stats for tlb fault */
+		vmstats_inc(VMSTAT_TLB_FAULT);
+
 		/* Adrian: This checks for invalid entries and writes the first invalid entry found */
 		for (i=0; i<NUM_TLB; i++) {
 			tlb_read(&ehi, &elo, i);
@@ -194,6 +198,8 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 			elo = paddr | TLBLO_DIRTY | TLBLO_VALID;
 			DEBUG(DB_VM, "dumbvm: 0x%x -> 0x%x\n", faultaddress, paddr);
 			tlb_write(ehi, elo, i);
+			/* track stats for tlb fault free */
+			vmstats_inc(VMSTAT_TLB_FAULT_FREE);
 			splx(spl);
 			return 0;
 		}
@@ -204,6 +210,8 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 		elo = paddr | TLBLO_DIRTY | TLBLO_VALID;
 		i = tlb_get_rr_victim();
 		tlb_write(ehi, elo, i);
+		/* track stats for tlb fault replace */
+		vmstats_inc(VMSTAT_TLB_FAULT_REPLACE);
 		splx(spl);
 
 		// kprintf("dumbvm: Ran out of TLB entries - cannot handle page fault\n");
