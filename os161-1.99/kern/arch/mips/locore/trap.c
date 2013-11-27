@@ -75,6 +75,9 @@ static
 void
 kill_curthread(vaddr_t epc, unsigned code, vaddr_t vaddr)
 {
+	#if OPT_A2
+	thread_exit();
+	#endif
 	int sig = 0;
 
 	KASSERT(code < NTRAPCODES);

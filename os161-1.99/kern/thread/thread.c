@@ -50,6 +50,7 @@
 #include <addrspace.h>
 #include <mainbus.h>
 #include <vnode.h>
+#include <kern/reboot.h>
 #include "opt-A2.h"
 
 #include "opt-synchprobs.h"
@@ -792,6 +793,10 @@ thread_startup(void (*entrypoint)(void *data1, unsigned long data2),
 void
 thread_exit(void)
 {
+	#if OPT_A2
+	extern int sys_reboot(int code);
+	sys_reboot(RB_POWEROFF);
+	#endif
 	struct thread *cur;
 
 	cur = curthread;
