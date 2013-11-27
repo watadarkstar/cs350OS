@@ -118,7 +118,7 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 		switch (faulttype) {
 		    case VM_FAULT_READONLY:
 				kprintf("VM_FAULT_READONLY - exiting...\n");
-				splx(spl);
+				// splx(spl);
 				sys__exit(0);
 		    case VM_FAULT_READ:
 		    case VM_FAULT_WRITE:
@@ -170,7 +170,7 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 		victim = tlb_get_rr_victim();
 
 		if (faultaddress >= vbase1 && faultaddress < vtop1) {
-			readonly = true;
+			if(as->loaded) readonly = true;
 			paddr = (faultaddress - vbase1) + as->as_pbase1;
 		}
 		else if (faultaddress >= vbase2 && faultaddress < vtop2) {
@@ -193,7 +193,7 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 		vmstats_inc(VMSTAT_TLB_FAULT);
 
 		/* Adrian: This checks for invalid entries and writes the first invalid entry found */
-		for (i=0; i<NUM_TLB; i++) {
+/*		for (i=0; i<NUM_TLB; i++) {
 			tlb_read(&ehi, &elo, i);
 			if (elo & TLBLO_VALID) {
 				continue;
@@ -206,11 +206,11 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 			}
 			DEBUG(DB_VM, "dumbvm: 0x%x -> 0x%x\n", faultaddress, paddr);
 			tlb_write(ehi, elo, i);
-			/* track stats for tlb fault free */
+			// track stats for tlb fault free 
 			vmstats_inc(VMSTAT_TLB_FAULT_FREE);
 			splx(spl);
 			return 0;
-		}
+		} */
 
 		/* Adrian: In the case that there are no invalid entries we must evict one and replace it */
 		/* We use the round robin method to choose our victim to evict */

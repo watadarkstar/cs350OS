@@ -121,12 +121,16 @@ boot(void)
 		GROUP_VERSION, buildconfig, buildversion);
 	kprintf("\n");
 
+
 	/* Early initialization. */
 	ram_bootstrap();
 	proc_bootstrap();
 	thread_bootstrap();
 	hardclock_bootstrap();
 	vfs_bootstrap();
+	#if OPT_A3
+	vmstats_init();
+	#endif
 
 	/* Probe and initialize devices. Interrupts should come on. */
 	kprintf("Device probe...\n");
@@ -144,10 +148,6 @@ boot(void)
 
 	/* Default bootfs - but ignore failure, in case emu0 doesn't exist */
 	vfs_setbootfs("emu0");
-
-	#if OPT_A3
-	vmstats_init();
-	#endif
 
 	/*
 	 * Make sure various things aren't screwed up.

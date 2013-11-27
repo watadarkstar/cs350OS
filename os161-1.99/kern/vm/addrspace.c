@@ -96,6 +96,7 @@ as_create(void)
 		as->as_pbase2 = 0;
 		as->as_npages2 = 0;
 		as->as_stackpbase = 0;
+		as->loaded = false;
 
 		return as;
 	#else
@@ -350,6 +351,7 @@ as_complete_load(struct addrspace *as)
 	/*
 	 * Write this.
 	 */
+	 as->loaded = true;
 
 	(void)as;
 	return 0;
