@@ -193,7 +193,7 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 		vmstats_inc(VMSTAT_TLB_FAULT);
 
 		/* Adrian: This checks for invalid entries and writes the first invalid entry found */
-/*		for (i=0; i<NUM_TLB; i++) {
+		for (i=0; i<NUM_TLB; i++) {
 			tlb_read(&ehi, &elo, i);
 			if (elo & TLBLO_VALID) {
 				continue;
@@ -210,7 +210,7 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 			vmstats_inc(VMSTAT_TLB_FAULT_FREE);
 			splx(spl);
 			return 0;
-		} */
+		} 
 
 		/* Adrian: In the case that there are no invalid entries we must evict one and replace it */
 		/* We use the round robin method to choose our victim to evict */
