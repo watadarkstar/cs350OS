@@ -174,7 +174,7 @@ common_prog(int nargs, char **args)
 #if OPT_A2
   // TODO: This is a dirty hack to make it wait. Should probably
   // change this
-  while(!last_thread()) clocksleep(1);
+	P(sem_runprogram);
 #endif
 
 	return 0;

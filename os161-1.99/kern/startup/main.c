@@ -74,6 +74,7 @@
 extern const int buildversion;
 extern const char buildconfig[];
 
+
 /*
  * Copyright message for the OS/161 base code.
  */
@@ -110,6 +111,7 @@ boot(void)
   // Not sure if this is the best place to put this, but I'm not
   // sure where else we can initialize our process array early enough
   proc_array_init();
+
 #endif
 
 	kprintf("\n");
@@ -117,7 +119,7 @@ boot(void)
 	kprintf("%s", harvard_copyright);
 	kprintf("\n");
 
-	kprintf("Put-your-group-name-here's system version %s (%s #%d)\n",
+	kprintf("My other OS is Windows ... system version %s (%s #%d)\n",
 		GROUP_VERSION, buildconfig, buildversion);
 	kprintf("\n");
 
@@ -154,6 +156,12 @@ boot(void)
 	 */
 	COMPILE_ASSERT(sizeof(userptr_t) == sizeof(char *));
 	COMPILE_ASSERT(sizeof(*(userptr_t)0) == sizeof(char));
+	
+	#if OPT_A2
+
+	struct semaphore *  sem_runprogram = sem_create("runprogram", 0);
+	(void)sem_runprogram;
+	#endif
 }
 
 /*

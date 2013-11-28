@@ -174,4 +174,7 @@ void thread_consider_migration(void);
 
 int last_thread(void);
 
+extern struct semaphore * sem_runprogram;
+
+
 #endif /* _THREAD_H_ */
