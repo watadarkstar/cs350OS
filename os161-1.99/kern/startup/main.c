@@ -60,7 +60,10 @@
 #endif
 
 
-
+// Global semaphore declaration
+#if OPT_A2
+struct semaphore *  sem_runprogram;
+#endif
 
 /*
  * These two pieces of data are maintained by the makefiles and build system.
@@ -156,12 +159,11 @@ boot(void)
 	 */
 	COMPILE_ASSERT(sizeof(userptr_t) == sizeof(char *));
 	COMPILE_ASSERT(sizeof(*(userptr_t)0) == sizeof(char));
-	
-	#if OPT_A2
 
-	struct semaphore *  sem_runprogram = sem_create("runprogram", 0);
-	(void)sem_runprogram;
-	#endif
+#if OPT_A2
+  sem_runprogram = sem_create("runprogram", 0);
+#endif
+
 }
 
 /*
@@ -174,7 +176,7 @@ shutdown(void)
 	#if OPT_A3
 	vmstats_print();
 	#endif
-	
+
 	kprintf("Shutting down.\n");
 
 	vfs_clearbootfs();
