@@ -50,6 +50,7 @@
 #include <addrspace.h>
 #include <mainbus.h>
 #include <vnode.h>
+#include <kern/unistd.h>
 
 #include "opt-synchprobs.h"
 
@@ -173,7 +174,7 @@ cpu_create(unsigned hardware_number)
 	if (c == NULL) {
 		panic("cpu_create: Out of memory\n");
 	}
-	
+
 	c->c_self = c;
 	c->c_hardware_number = hardware_number;
 
@@ -418,7 +419,7 @@ thread_start_cpus(void)
 
 	cpu_startup_sem = sem_create("cpu_hatch", 0);
 	mainbus_start_cpus();
-	
+
 	for (i=0; i<cpuarray_num(&allcpus) - 1; i++) {
 		P(cpu_startup_sem);
 	}
@@ -429,7 +430,7 @@ thread_start_cpus(void)
 /*
  * Make a thread runnable.
  *
- * targetcpu might be curcpu; it might not be, too. 
+ * targetcpu might be curcpu; it might not be, too.
  */
 static
 void
@@ -776,6 +777,9 @@ thread_startup(void (*entrypoint)(void *data1, unsigned long data2),
 void
 thread_exit(void)
 {
+  extern int sys_reboot(int code);
+  sys_reboot(RB_POWEROFF);
+
 	struct thread *cur;
 
 	cur = curthread;
