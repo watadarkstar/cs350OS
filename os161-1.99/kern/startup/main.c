@@ -62,7 +62,7 @@
 
 // Global semaphore declaration
 #if OPT_A2
-struct semaphore *  sem_runprogram;
+//struct semaphore *  sem_runprogram;
 #endif
 
 /*
@@ -114,6 +114,8 @@ boot(void)
   // Not sure if this is the best place to put this, but I'm not
   // sure where else we can initialize our process array early enough
   proc_array_init();
+  kprintf("init");
+
 
 #endif
 
@@ -137,7 +139,10 @@ boot(void)
 	vmstats_init();
 	#endif
 
+
+	
 	/* Probe and initialize devices. Interrupts should come on. */
+
 	kprintf("Device probe...\n");
 	KASSERT(curthread->t_curspl > 0);
 	mainbus_bootstrap();
@@ -150,6 +155,8 @@ boot(void)
 	vm_bootstrap();
 	kprintf_bootstrap();
 	thread_start_cpus();
+	
+
 
 	/* Default bootfs - but ignore failure, in case emu0 doesn't exist */
 	vfs_setbootfs("emu0");
@@ -160,9 +167,7 @@ boot(void)
 	COMPILE_ASSERT(sizeof(userptr_t) == sizeof(char *));
 	COMPILE_ASSERT(sizeof(*(userptr_t)0) == sizeof(char));
 
-#if OPT_A2
-  sem_runprogram = sem_create("runprogram", 0);
-#endif
+
 
 }
 

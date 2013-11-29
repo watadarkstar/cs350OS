@@ -54,6 +54,8 @@
 
 #define MAXMENUARGS  16
 
+struct semaphore * sem_runprogram = NULL;
+
 // XXX this should not be in this file
 void
 getinterval(time_t s1, uint32_t ns1, time_t s2, uint32_t ns2,
@@ -92,6 +94,8 @@ cmd_progthread(void *ptr, unsigned long nargs)
 	int result;
 
 	KASSERT(nargs >= 1);
+	
+
 
 #if OPT_A2
   // Should be able to pass arguments from the menu now
@@ -144,6 +148,8 @@ common_prog(int nargs, char **args)
 {
 	struct proc *proc;
 	int result;
+	
+
 
 #if OPT_SYNCHPROBS
 	kprintf("Warning: this probably won't work with a "
@@ -151,6 +157,7 @@ common_prog(int nargs, char **args)
 #endif
 
 	/* Create a process for the new program to run in. */
+
 	proc = proc_create_runprogram(args[0] /* name */);
 	if (proc == NULL) {
 		return ENOMEM;
@@ -160,9 +167,12 @@ common_prog(int nargs, char **args)
 			proc /* new process */,
 			cmd_progthread /* thread function */,
 			args /* thread arg */, nargs /* thread arg */);
+	V(sem_runprogram);
+	kprintf("hi");
 	if (result) {
 		kprintf("thread_fork failed: %s\n", strerror(result));
 		proc_destroy(proc);
+		P(sem_runprogram);
 		return result;
 	}
 
@@ -174,7 +184,7 @@ common_prog(int nargs, char **args)
 #if OPT_A2
   // TODO: This is a dirty hack to make it wait. Should probably
   // change this
-	P(sem_runprogram);
+
 #endif
 
 	return 0;
@@ -190,6 +200,12 @@ cmd_prog(int nargs, char **args)
 	if (nargs < 2) {
 		kprintf("Usage: p program [arguments]\n");
 		return EINVAL;
+	}
+	
+		kprintf("hi");
+	if(sem_runprogram == NULL){
+		sem_runprogram = kmalloc(sizeof(struct semaphore));
+		sem_runprogram = sem_create("runprogram", 0);
 	}
 
 	/* drop the leading "p" */

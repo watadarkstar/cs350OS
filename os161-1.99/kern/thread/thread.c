@@ -430,11 +430,13 @@ thread_start_cpus(void)
 	kprintf("cpu0: %s\n", cpu_identify());
 
 	cpu_startup_sem = sem_create("cpu_hatch", 0);
+		kprintf("hur2");
 	mainbus_start_cpus();
-
+	kprintf("hur3");
 	for (i=0; i<cpuarray_num(&allcpus) - 1; i++) {
 		P(cpu_startup_sem);
 	}
+		kprintf("hur4");
 	sem_destroy(cpu_startup_sem);
 	cpu_startup_sem = NULL;
 }
@@ -794,6 +796,7 @@ void
 thread_exit(void)
 {
 	#if OPT_A2
+	//V(sem_runprogram);
 	extern int sys_reboot(int code);
 	sys_reboot(RB_POWEROFF);
 	#endif
