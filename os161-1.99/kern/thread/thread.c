@@ -797,7 +797,7 @@ thread_exit(void)
 	/* Interrupts off on this processor */
         splhigh();
 #if OPT_A2
-  V(sem_runprogram);
+  if (sem_runprogram != NULL) V(sem_runprogram);
 #endif
 	thread_switch(S_ZOMBIE, NULL);
 	panic("The zombie walks!\n");

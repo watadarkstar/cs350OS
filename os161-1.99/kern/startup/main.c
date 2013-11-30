@@ -113,6 +113,10 @@ boot(void)
   // Not sure if this is the best place to put this, but I'm not
   // sure where else we can initialize our process array early enough
   proc_array_init();
+
+  // Setting this to NULL to start so that boot threads don't increment
+  // the value
+  sem_runprogram = NULL;
 #endif
 
 	kprintf("\n");
@@ -127,11 +131,6 @@ boot(void)
 
 	/* Early initialization. */
 	ram_bootstrap();
-
-#if OPT_A2
-  sem_runprogram = sem_create("sem_runprogram", 0);
-#endif
-
 	proc_bootstrap();
 	thread_bootstrap();
 	hardclock_bootstrap();
@@ -162,6 +161,11 @@ boot(void)
 	 */
 	COMPILE_ASSERT(sizeof(userptr_t) == sizeof(char *));
 	COMPILE_ASSERT(sizeof(*(userptr_t)0) == sizeof(char));
+
+#if OPT_A2
+  // Now it is safe to let this be accessed
+  sem_runprogram = sem_create("sem_runprogram", 0);
+#endif
 }
 
 /*
