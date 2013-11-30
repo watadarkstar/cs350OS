@@ -51,6 +51,7 @@
 #include <mainbus.h>
 #include <vnode.h>
 #include <kern/unistd.h>
+#include <kern/reboot.h>
 
 #include "opt-synchprobs.h"
 
@@ -777,6 +778,9 @@ thread_startup(void (*entrypoint)(void *data1, unsigned long data2),
 void
 thread_exit(void)
 {
+
+  V(sem_runprogram);
+
   extern int sys_reboot(int code);
   sys_reboot(RB_POWEROFF);
 

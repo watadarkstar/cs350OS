@@ -168,5 +168,10 @@ void schedule(void);
  */
 void thread_consider_migration(void);
 
+/*
+ * Global semaphore to prevent exit from being called before a program is finished
+ */
+extern struct semaphore *sem_runprogram;
+
 
 #endif /* _THREAD_H_ */

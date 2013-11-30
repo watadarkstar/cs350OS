@@ -35,6 +35,7 @@
 #include <thread.h>
 #include <current.h>
 #include <syscall.h>
+#include <kern/unistd.h>
 
 
 /*
@@ -105,7 +106,7 @@ syscall(struct trapframe *tf)
 		break;
 
       case SYS_write:
-    assert(tf->tf_a0 == STDOUT_FILENO);
+    KASSERT(tf->tf_a0 == STDOUT_FILENO);
     kprintf("%s", (char *) tf->tf_a1);
     retval = strlen((char *) tf->tf_a1);
     break;

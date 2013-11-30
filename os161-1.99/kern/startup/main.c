@@ -55,7 +55,7 @@
 /*
  * These two pieces of data are maintained by the makefiles and build system.
  * buildconfig is the name of the config file the kernel was configured with.
- * buildversion starts at 1 and is incremented every time you link a kernel. 
+ * buildversion starts at 1 and is incremented every time you link a kernel.
  *
  * The purpose is not to show off how many kernels you've linked, but
  * to make it easy to make sure that the kernel you just booted is the
@@ -63,6 +63,11 @@
  */
 extern const int buildversion;
 extern const char buildconfig[];
+
+/*
+ * Global semaphore to allow programs to finish before exiting
+ */
+struct semaphore *sem_runprogram;
 
 /*
  * Copyright message for the OS/161 base code.
@@ -101,7 +106,7 @@ boot(void)
 	kprintf("%s", harvard_copyright);
 	kprintf("\n");
 
-	kprintf("Put-your-group-name-here's system version %s (%s #%d)\n", 
+	kprintf("Put-your-group-name-here's system version %s (%s #%d)\n",
 		GROUP_VERSION, buildconfig, buildversion);
 	kprintf("\n");
 
@@ -111,6 +116,9 @@ boot(void)
 	thread_bootstrap();
 	hardclock_bootstrap();
 	vfs_bootstrap();
+
+  // Initialize global semaphore
+  sem_runprogram = sem_create("sem_runprogram", 0);
 
 	/* Probe and initialize devices. Interrupts should come on. */
 	kprintf("Device probe...\n");
@@ -135,6 +143,7 @@ boot(void)
 	 */
 	COMPILE_ASSERT(sizeof(userptr_t) == sizeof(char *));
 	COMPILE_ASSERT(sizeof(*(userptr_t)0) == sizeof(char));
+
 }
 
 /*
@@ -146,7 +155,7 @@ shutdown(void)
 {
 
 	kprintf("Shutting down.\n");
-	
+
 	vfs_clearbootfs();
 	vfs_clearcurdir();
 	vfs_unmountall();
