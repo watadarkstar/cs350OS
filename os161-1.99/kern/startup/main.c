@@ -57,6 +57,9 @@
 
 #if OPT_A2
 #include <limits.h>
+
+// Declare global semaphore
+struct semaphore *sem_runprogram;
 #endif
 
 
@@ -124,6 +127,11 @@ boot(void)
 
 	/* Early initialization. */
 	ram_bootstrap();
+
+#if OPT_A2
+  sem_runprogram = sem_create("sem_runprogram", 0);
+#endif
+
 	proc_bootstrap();
 	thread_bootstrap();
 	hardclock_bootstrap();
@@ -166,7 +174,7 @@ shutdown(void)
 	#if OPT_A3
 	vmstats_print();
 	#endif
-	
+
 	kprintf("Shutting down.\n");
 
 	vfs_clearbootfs();

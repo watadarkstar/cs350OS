@@ -42,6 +42,7 @@
 #include <vnode.h>
 
 #include <limits.h>
+#include "opt-A2.h"
 
 struct cpu;
 
@@ -109,7 +110,7 @@ struct thread {
 	 */
 
 	/* add more here as needed */
-	
+
 };
 
 /*
@@ -172,6 +173,9 @@ void schedule(void);
  */
 void thread_consider_migration(void);
 
-int last_thread(void);
+#if OPT_A2
+// Global semaphore to prevent menu from continuing before tests finish
+extern struct semaphore *sem_runprogram;
+#endif
 
 #endif /* _THREAD_H_ */

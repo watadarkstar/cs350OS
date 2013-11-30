@@ -107,7 +107,7 @@ cmd_progthread(void *ptr, unsigned long nargs)
 	strcpy(progname, args[0]);
 
 #if OPT_A2
-	/* 
+	/*
 	 TO test execv we can replace this with execv
 	 result = sys_execv(progname, args);
 	 TO revert and run normally use this
@@ -172,9 +172,7 @@ common_prog(int nargs, char **args)
 	 */
 
 #if OPT_A2
-  // TODO: This is a dirty hack to make it wait. Should probably
-  // change this
-  while(!last_thread()) clocksleep(1);
+  P(sem_runprogram);
 #endif
 
 	return 0;

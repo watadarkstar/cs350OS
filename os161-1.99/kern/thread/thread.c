@@ -50,17 +50,10 @@
 #include <addrspace.h>
 #include <mainbus.h>
 #include <vnode.h>
-#include <kern/reboot.h>
 #include "opt-A2.h"
 
 #include "opt-synchprobs.h"
 #include "opt-A2.h"
-
-
-#if OPT_A2
-// Keep track of number of running threads
-static int numthreads;
-#endif
 
 /* Magic number used as a guard value on kernel thread stacks. */
 #define THREAD_STACK_MAGIC 0xbaadf00d
@@ -389,10 +382,6 @@ thread_bootstrap(void)
 	/* cpu_create() should have set t_proc. */
 	KASSERT(curthread->t_proc != NULL);
 
-#if OPT_A2
-  numthreads = 1;
-#endif
-
 	/* Done */
 }
 
@@ -539,10 +528,6 @@ thread_fork(const char *name,
 
 	/* Lock the current cpu's run queue and make the new thread runnable */
 	thread_make_runnable(newthread, false);
-
-#if OPT_A2
-  numthreads++;
-#endif
 
 	return 0;
 }
@@ -793,10 +778,6 @@ thread_startup(void (*entrypoint)(void *data1, unsigned long data2),
 void
 thread_exit(void)
 {
-	#if OPT_A2
-	extern int sys_reboot(int code);
-	sys_reboot(RB_POWEROFF);
-	#endif
 	struct thread *cur;
 
 	cur = curthread;
@@ -816,7 +797,7 @@ thread_exit(void)
 	/* Interrupts off on this processor */
         splhigh();
 #if OPT_A2
-  numthreads--;
+  V(sem_runprogram);
 #endif
 	thread_switch(S_ZOMBIE, NULL);
 	panic("The zombie walks!\n");
@@ -1221,13 +1202,3 @@ interprocessor_interrupt(void)
 	curcpu->c_ipi_pending = 0;
 	spinlock_release(&curcpu->c_ipi_lock);
 }
-
-#if OPT_A2
-int last_thread(void) {
-  int spl, threads;
-  spl = splhigh();
-  threads = numthreads;
-  splx(spl);
-  return (threads == 1);
-}
-#endif

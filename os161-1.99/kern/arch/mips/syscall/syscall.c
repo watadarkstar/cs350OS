@@ -40,9 +40,6 @@
 #if OPT_A2
 #include <proc.h>
 #include <addrspace.h>
-#include <kern/errno.h> 
-#include <kern/unistd.h>
-#include <kern/fcntl.h>
 #endif
 
 
@@ -122,16 +119,12 @@ syscall(struct trapframe *tf)
 		case SYS__exit:
 			// Signature:
 			// void _exit(int exitcode)
-			// sys__exit(tf->tf_a0);
-			thread_exit();
+			sys__exit(tf->tf_a0);
 			break;
 		case SYS_write:
 			// Signature:
 	 		// int write(int fd, const void *buf, size_t nbytes)
-			// err = sys_write(tf->tf_a0, (const void*)tf->tf_a1, (size_t)tf->tf_a2, &retval);
-			// kprintf("%d", retval);
-			kprintf("%s", (char *) tf->tf_a1);
-			retval = strlen((char *) tf->tf_a1);
+			err = sys_write(tf->tf_a0, (const void*)tf->tf_a1, (size_t)tf->tf_a2, &retval);
 			break;
 		case SYS_read:
 			// Signature:
