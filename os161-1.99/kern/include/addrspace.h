@@ -38,6 +38,7 @@
 #include <vm.h>
 #include "opt-dumbvm.h"
 #include "opt-A3.h"
+#include "segments.h"
 
 struct vnode;
 
@@ -68,7 +69,10 @@ struct addrspace {
         paddr_t as_pbase2;
         size_t as_npages2;
         paddr_t as_stackpbase;
-        bool loaded;
+
+        // New stuff for A3
+        struct segment code, data, stack;// 3 types of segments
+        bool loaded;// set to true in as_complete_load
 #endif
 };
 

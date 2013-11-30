@@ -1,17 +1,19 @@
 #ifndef _PT_H_
 #define _PT_H_
 
+#include "vm.h"
+#include "types.h"
 #include "lib.h"
+#include "segments.h"
+
+#define PT_SIZE 1024
 
 struct pte {
+	// vaddr -> paddr
 	paddr_t paddr;
-  	vaddr_t vaddr;
   	int valid;
 };
-struct pt {
-	struct pte *ptes;
-};
 
-void pt_create(struct pt * pt);
+void pte_create(struct pte * pte);
 
 #endif
