@@ -12,6 +12,6 @@ struct pt {
 	struct pte *ptes;
 };
 
-void pt * pt_create(struct pt * pt);
+void pt_create(struct pt * pt);
 
 #endif
