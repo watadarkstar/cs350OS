@@ -40,6 +40,8 @@
 #include <spl.h>
 #include <mips/tlb.h>
 #include <uw-vmstats.h>
+#include <segments.h>
+#include <pt.h>
 #endif
 
 
@@ -56,12 +58,14 @@
 	getppages(unsigned long npages)
 	{
 		paddr_t addr;
-
 		spinlock_acquire(&stealmem_lock);
-
 		addr = ram_stealmem(npages);
-		
 		spinlock_release(&stealmem_lock);
+
+		if(addr == 0){
+			panic("getppages failed no memory - probably due to the sys.conf file your using; use sys161-8MB.conf \n");
+		}
+
 		return addr;
 	}
 
@@ -89,6 +93,7 @@ as_create(void)
 			return NULL;
 		}
 
+		/* Adrian: For now we leave this here */
 		as->as_vbase1 = 0;
 		as->as_pbase1 = 0;
 		as->as_npages1 = 0;
@@ -96,6 +101,13 @@ as_create(void)
 		as->as_pbase2 = 0;
 		as->as_npages2 = 0;
 		as->as_stackpbase = 0;
+		/* Adrian: For now we leave this here */
+
+		segment_create(&as->code);
+		segment_create(&as->data);
+		segment_create(&as->stack);
+		as->stack.vbase = USERSTACK - DUMBVM_STACKPAGES*PAGE_SIZE;
+        as->stack.npages = DUMBVM_STACKPAGES;
 		as->loaded = false;
 
 		return as;
@@ -119,7 +131,12 @@ int
 as_copy(struct addrspace *old, struct addrspace **ret)
 {
 	#if OPT_A3
-		struct addrspace *new;
+		(void)old;
+		(void)ret;
+		// Adrian: I want this to fail, we don't support this yet and I dont want to deal with it
+		KASSERT(0);
+
+		/* struct addrspace *new;
 
 		new = as_create();
 		if (new==NULL) {
@@ -131,7 +148,7 @@ as_copy(struct addrspace *old, struct addrspace **ret)
 		new->as_vbase2 = old->as_vbase2;
 		new->as_npages2 = old->as_npages2;
 
-		/* (Mis)use as_prepare_load to allocate some physical memory. */
+		// (Mis)use as_prepare_load to allocate some physical memory.
 		if (as_prepare_load(new)) {
 			as_destroy(new);
 			return ENOMEM;
@@ -154,6 +171,7 @@ as_copy(struct addrspace *old, struct addrspace **ret)
 			DUMBVM_STACKPAGES*PAGE_SIZE);
 		
 		*ret = new;
+		*/
 		return 0;
 	#else
 		struct addrspace *newas;
@@ -274,17 +292,25 @@ as_define_region(struct addrspace *as, vaddr_t vaddr, size_t sz,
 		(void)writeable;
 		(void)executable;
 
-		if (as->as_vbase1 == 0) {
+		/* Adrian: For now we leave this here */
+		if (as->as_vbase1 == 0 && as->code.vbase == 0) {
 			as->as_vbase1 = vaddr;
 			as->as_npages1 = npages;
+            as->code.npages = npages;
+			as->code.ptable = segment_prepare(&as->code);
+			as->code.vbase = vaddr;
 			return 0;
 		}
 
-		if (as->as_vbase2 == 0) {
+		if (as->as_vbase2 == 0 && as->data.vbase == 0) {
 			as->as_vbase2 = vaddr;
 			as->as_npages2 = npages;
+            as->data.npages = npages;
+			as->data.ptable = segment_prepare(&as->data);
+			as->data.vbase = vaddr;
 			return 0;
 		}
+		/* Adrian: For now we leave this here */
 
 		/*
 		 * Support for more than two regions is not available.
@@ -311,16 +337,18 @@ as_prepare_load(struct addrspace *as)
 {
 	// based on dumbvm code
 	#if OPT_A3
+		
+		/*
 		KASSERT(as->as_pbase1 == 0);
 		KASSERT(as->as_pbase2 == 0);
 		KASSERT(as->as_stackpbase == 0);
 
-		as->as_pbase1 = getppages(as->as_npages1);
+		as->as_pbase1 = getppages(as->code.npages);
 		if (as->as_pbase1 == 0) {
 			return ENOMEM;
 		}
 
-		as->as_pbase2 = getppages(as->as_npages2);
+		as->as_pbase2 = getppages(as->data.npages);
 		if (as->as_pbase2 == 0) {
 			return ENOMEM;
 		}
@@ -333,7 +361,9 @@ as_prepare_load(struct addrspace *as)
 		as_zero_region(as->as_pbase1, as->as_npages1);
 		as_zero_region(as->as_pbase2, as->as_npages2);
 		as_zero_region(as->as_stackpbase, DUMBVM_STACKPAGES);
+		*/
 
+		as->stack.ptable = segment_prepare(&as->stack);
 		return 0;
 	#else
 		/*
@@ -364,7 +394,8 @@ as_define_stack(struct addrspace *as, vaddr_t *stackptr)
 	 * Write this.
 	 */
 	 #if OPT_A3
-	 	KASSERT(as->as_stackpbase != 0);
+	 	// KASSERT(as->as_stackpbase != 0);
+	 	// *stackptr = USERSTACK;
 	 #endif
 
 	(void)as;

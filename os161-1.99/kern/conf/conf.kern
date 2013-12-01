@@ -338,6 +338,8 @@ file      vm/kmalloc.c
 # UW Mod
 defoption vm
 optfile   vm   vm/vm.c
+file      vm/pt.c
+file      vm/segments.c
 
 optofffile dumbvm   vm/addrspace.c
 
