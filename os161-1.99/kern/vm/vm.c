@@ -21,6 +21,12 @@
 #include <mips/tlb.h>
 #include <uw-vmstats.h>
 #include <syscall.h>
+#include <coremap.h>
+#endif
+
+#if OPT_A3
+int bootstrapped = 1;
+struct lock * cm_lock;
 #endif
 
 void
@@ -29,6 +35,18 @@ vm_bootstrap(void)
 	/* May need to add code. */
 	#if OPT_A3
 		vmstats_init();
+		cm_lock = create_lock("cm_lock");
+		//This section should alway be last
+		paddr_t first;
+		paddr_t last;
+		ram_getsize(&first, &last);
+		
+		lock_acquire(cm_lock);
+		coremap_init(first, last);
+		lock_release(cm_lock);
+		
+		bootstrapped = 0;
+		
 	#endif
 }
 
@@ -67,7 +85,12 @@ alloc_kpages(int npages)
 	// based on dumbvm
 	#if OPT_A3
 		paddr_t pa;
-		pa = getppages(npages);
+		if(bootstrapped){
+			pa = coremap_alloc_contigous(npages);
+		}
+		else{
+			pa = getppages(npages);
+		}
 		if (pa==0) {
 			return 0;
 		}
@@ -83,9 +106,13 @@ alloc_kpages(int npages)
 void 
 free_kpages(vaddr_t addr)
 {
+	#if OPT_A3
+	coremap_free(addr);
+	#else
 	/* nothing - leak the memory. */
 
 	(void)addr;
+	#endif
 }
 
 void

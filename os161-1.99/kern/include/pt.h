@@ -9,7 +9,9 @@
 struct pte {
   	int valid;
 	int dirty;
+	int free;
 	paddr_t paddr;
+	vaddr_t vaddr;
 };
 
 /* Creates a page table entry */
