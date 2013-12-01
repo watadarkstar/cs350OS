@@ -9,6 +9,7 @@
 struct pte {
 	paddr_t paddr;
   	int valid;
+	int dirty;
 };
 
 void pte_create(struct pte * pte);
