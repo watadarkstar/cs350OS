@@ -14,6 +14,8 @@ paddr_t pte_load(struct pte *pte){
 	paddr_t paddr = getppages(1);
 	pte->paddr = paddr;
 	pte->valid = 1;
+	pte->dirty = 1;
+	pte->free = 0;
 	return paddr;
 }
 

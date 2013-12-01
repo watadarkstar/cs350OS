@@ -25,8 +25,8 @@
 #endif
 
 #if OPT_A3
-int bootstrapped = 1;
-struct lock * cm_lock;
+int bootstrapped = 0;
+
 #endif
 
 void
@@ -35,33 +35,18 @@ vm_bootstrap(void)
 	/* May need to add code. */
 	#if OPT_A3
 		vmstats_init();
-		cm_lock = create_lock("cm_lock");
+
 		//This section should alway be last
-		paddr_t first;
-		paddr_t last;
-		ram_getsize(&first, &last);
-		
-		lock_acquire(cm_lock);
+
+		#if 0 
 		coremap_init(first, last);
-		lock_release(cm_lock);
 		
-		bootstrapped = 0;
+		bootstrapped = 1;		
+		#endif
 		
 	#endif
 }
 
-#if 0 
-/* You will need to call this at some point */
-static
-paddr_t
-getppages(unsigned long npages)
-{
-   /* Adapt code form dumbvm or implement something new */
-	 (void)npages;
-	 panic("Not implemented yet.\n");
-   return (paddr_t) NULL;
-}
-#endif
 
 #if OPT_A3
 
@@ -107,7 +92,9 @@ void
 free_kpages(vaddr_t addr)
 {
 	#if OPT_A3
+	#if 0
 	coremap_free(addr);
+	#endif
 	#else
 	/* nothing - leak the memory. */
 
