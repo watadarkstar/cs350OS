@@ -53,7 +53,10 @@
 #include "opt-A0.h"
 #include "opt-A2.h"
 #include "opt-A3.h"
+#if OPT_A3
 #include "uw-vmstats.h"
+#include "vm.h"
+#endif
 
 #if OPT_A2
 #include <limits.h>
@@ -136,7 +139,7 @@ boot(void)
 	hardclock_bootstrap();
 	vfs_bootstrap();
 	#if OPT_A3
-	vmstats_init();
+	// vm_bootstrap();// already called elsewhere below
 	#endif
 
 	/* Probe and initialize devices. Interrupts should come on. */

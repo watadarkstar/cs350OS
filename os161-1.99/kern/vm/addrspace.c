@@ -40,6 +40,8 @@
 #include <spl.h>
 #include <mips/tlb.h>
 #include <uw-vmstats.h>
+#include <segments.h>
+#include <pt.h>
 #endif
 
 
@@ -51,18 +53,20 @@
 	 */
 	struct spinlock stealmem_lock = SPINLOCK_INITIALIZER;
 
-	// based on dumbvm
+	// based on dumbvm code
 	paddr_t
 	getppages(unsigned long npages)
 	{
-		paddr_t addr;
-
+		paddr_t pa;
 		spinlock_acquire(&stealmem_lock);
-
-		addr = ram_stealmem(npages);
-		
+		pa = ram_stealmem(npages);
 		spinlock_release(&stealmem_lock);
-		return addr;
+
+		/* Check that we did get a physical address otherwise this is a problem and the os hangs silently */
+		if(pa == 0){
+			panic("getppages failed no memory - probably due to the sys.conf file your using; use sys161-8MB.conf \n");
+		}
+		return pa;
 	}
 
 	// based on dumbvm
@@ -89,6 +93,7 @@ as_create(void)
 			return NULL;
 		}
 
+		/* Adrian: For now we leave this here to support the old code as well */
 		as->as_vbase1 = 0;
 		as->as_pbase1 = 0;
 		as->as_npages1 = 0;
@@ -96,6 +101,17 @@ as_create(void)
 		as->as_pbase2 = 0;
 		as->as_npages2 = 0;
 		as->as_stackpbase = 0;
+
+		/* Create the code segment */
+		segment_create(&as->code, CODE);
+
+		/* Create the data segment */
+		segment_create(&as->data, DATA);
+
+		/* Create the stack segment */
+		segment_create(&as->stack, STACK);
+
+		/* Mark the address space as not fully loaded */
 		as->loaded = false;
 
 		return as;
@@ -131,7 +147,7 @@ as_copy(struct addrspace *old, struct addrspace **ret)
 		new->as_vbase2 = old->as_vbase2;
 		new->as_npages2 = old->as_npages2;
 
-		/* (Mis)use as_prepare_load to allocate some physical memory. */
+		// (Mis)use as_prepare_load to allocate some physical memory.
 		if (as_prepare_load(new)) {
 			as_destroy(new);
 			return ENOMEM;
@@ -151,7 +167,7 @@ as_copy(struct addrspace *old, struct addrspace **ret)
 
 		memmove((void *)PADDR_TO_KVADDR(new->as_stackpbase),
 			(const void *)PADDR_TO_KVADDR(old->as_stackpbase),
-			DUMBVM_STACKPAGES*PAGE_SIZE);
+			STACKPAGES*PAGE_SIZE);
 		
 		*ret = new;
 		return 0;
@@ -274,15 +290,31 @@ as_define_region(struct addrspace *as, vaddr_t vaddr, size_t sz,
 		(void)writeable;
 		(void)executable;
 
-		if (as->as_vbase1 == 0) {
+		/* Adrian: For now we leave the old code here as well */
+		if (as->as_vbase1 == 0 && as->code.vbase == 0) {
+			/* Setup the segment */
 			as->as_vbase1 = vaddr;
 			as->as_npages1 = npages;
+            as->code.npages = npages;
+
+            /* Prepare the page table now that we have the npages needed */
+			as->code.ptable = segment_prepare(&as->code);
+			as->code.vbase = vaddr;
+
 			return 0;
 		}
 
-		if (as->as_vbase2 == 0) {
+		/* Adrian: For now we leave the old code here as well */
+		if (as->as_vbase2 == 0 && as->data.vbase == 0) {
+			/* Setup the segment */
 			as->as_vbase2 = vaddr;
 			as->as_npages2 = npages;
+            as->data.npages = npages;
+
+            /* Prepare the page table now that we have the npages needed */
+			as->data.ptable = segment_prepare(&as->data);
+			as->data.vbase = vaddr;
+
 			return 0;
 		}
 
@@ -311,29 +343,7 @@ as_prepare_load(struct addrspace *as)
 {
 	// based on dumbvm code
 	#if OPT_A3
-		KASSERT(as->as_pbase1 == 0);
-		KASSERT(as->as_pbase2 == 0);
-		KASSERT(as->as_stackpbase == 0);
-
-		as->as_pbase1 = getppages(as->as_npages1);
-		if (as->as_pbase1 == 0) {
-			return ENOMEM;
-		}
-
-		as->as_pbase2 = getppages(as->as_npages2);
-		if (as->as_pbase2 == 0) {
-			return ENOMEM;
-		}
-
-		as->as_stackpbase = getppages(DUMBVM_STACKPAGES);
-		if (as->as_stackpbase == 0) {
-			return ENOMEM;
-		}
-		
-		as_zero_region(as->as_pbase1, as->as_npages1);
-		as_zero_region(as->as_pbase2, as->as_npages2);
-		as_zero_region(as->as_stackpbase, DUMBVM_STACKPAGES);
-
+		(void)as;
 		return 0;
 	#else
 		/*
@@ -348,10 +358,10 @@ as_prepare_load(struct addrspace *as)
 int
 as_complete_load(struct addrspace *as)
 {
-	/*
-	 * Write this.
-	 */
-	 as->loaded = true;
+	#if OPT_A3
+		/* Mark the address space as fully loaded */
+		as->loaded = true;
+	#endif
 
 	(void)as;
 	return 0;
@@ -364,7 +374,8 @@ as_define_stack(struct addrspace *as, vaddr_t *stackptr)
 	 * Write this.
 	 */
 	 #if OPT_A3
-	 	KASSERT(as->as_stackpbase != 0);
+	 	// KASSERT(as->as_stackpbase != 0);
+	 	// *stackptr = USERSTACK;
 	 #endif
 
 	(void)as;

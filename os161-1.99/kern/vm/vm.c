@@ -27,6 +27,9 @@ void
 vm_bootstrap(void)
 {
 	/* May need to add code. */
+	#if OPT_A3
+		vmstats_init();
+	#endif
 }
 
 #if 0 
@@ -108,7 +111,6 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 		uint32_t ehi, elo;
 		struct addrspace *as;
 		int spl;
-		int victim;
 		bool readonly = false; 
 
 		faultaddress &= PAGE_FRAME;
@@ -117,8 +119,8 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 
 		switch (faulttype) {
 		    case VM_FAULT_READONLY:
+		    	/* We want to terminate the procces if we have a vm readonly fault */
 				kprintf("VM_FAULT_READONLY - exiting...\n");
-				// splx(spl);
 				sys__exit(0);
 		    case VM_FAULT_READ:
 		    case VM_FAULT_WRITE:
@@ -146,88 +148,105 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 		}
 
 		/* Assert that the address space has been set up properly. */
-		KASSERT(as->as_vbase1 != 0);
-		KASSERT(as->as_pbase1 != 0);
-		KASSERT(as->as_npages1 != 0);
-		KASSERT(as->as_vbase2 != 0);
-		KASSERT(as->as_pbase2 != 0);
-		KASSERT(as->as_npages2 != 0);
-		KASSERT(as->as_stackpbase != 0);
-		KASSERT((as->as_vbase1 & PAGE_FRAME) == as->as_vbase1);
-		KASSERT((as->as_pbase1 & PAGE_FRAME) == as->as_pbase1);
-		KASSERT((as->as_vbase2 & PAGE_FRAME) == as->as_vbase2);
-		KASSERT((as->as_pbase2 & PAGE_FRAME) == as->as_pbase2);
-		KASSERT((as->as_stackpbase & PAGE_FRAME) == as->as_stackpbase);
+		KASSERT(as->code.vbase != 0);
+		KASSERT(as->code.npages != 0);
+		KASSERT(as->data.vbase != 0);
+		KASSERT(as->data.npages != 0);
+		KASSERT(as->stack.vbase != 0);
+		KASSERT((as->code.vbase & PAGE_FRAME) == as->code.vbase);
+		KASSERT((as->code.vbase & PAGE_FRAME) == as->code.vbase);
+		KASSERT((as->stack.vbase & PAGE_FRAME) == as->stack.vbase);
 
-		vbase1 = as->as_vbase1;
-		vtop1 = vbase1 + as->as_npages1 * PAGE_SIZE;
-		vbase2 = as->as_vbase2;
-		vtop2 = vbase2 + as->as_npages2 * PAGE_SIZE;
-		stackbase = USERSTACK - DUMBVM_STACKPAGES * PAGE_SIZE;
+		vbase1 = as->code.vbase;
+		vtop1 = vbase1 + as->code.npages * PAGE_SIZE;
+		vbase2 = as->data.vbase;
+		vtop2 = vbase2 + as->data.npages * PAGE_SIZE;
+		stackbase = USERSTACK - STACKPAGES * PAGE_SIZE;
 		stacktop = USERSTACK;
 
-		/* New TLB Management stuff for victim eviction */
-		victim = tlb_get_rr_victim();
-
+		// TODO: the TLB should translate first (?)
 		if (faultaddress >= vbase1 && faultaddress < vtop1) {
+			/* Mark the code as readonly we only want this to be marked after loading has been done */
 			if(as->loaded) readonly = true;
-			paddr = (faultaddress - vbase1) + as->as_pbase1;
+
+			// paddr = (faultaddress - vbase1) + as->as_pbase1;
+			// kprintf("CODE %d\n", faultaddress);
+
+			/* Lookup the paddr for the faultaddress in the code segment */
+			paddr = segment_lookup(&as->code, faultaddress);
 		}
 		else if (faultaddress >= vbase2 && faultaddress < vtop2) {
-			paddr = (faultaddress - vbase2) + as->as_pbase2;
+			// paddr = (faultaddress - vbase2) + as->as_pbase2;
+			// kprintf("DATA %d\n", faultaddress);
+
+			/* Lookup the paddr for the faultaddress in the data segment */
+			paddr = segment_lookup(&as->data, faultaddress);
 		}
 		else if (faultaddress >= stackbase && faultaddress < stacktop) {
-			paddr = (faultaddress - stackbase) + as->as_stackpbase;
+			// paddr = (faultaddress - stackbase) + as->as_stackpbase;
+			// kprintf("STACK%d\n", faultaddress);
+
+			/* Lookup the paddr for the faultaddress in the stack segment */
+			paddr = segment_lookup(&as->stack, faultaddress);
 		}
 		else {
 			return EFAULT;
 		}
 
-		/* make sure it's page-aligned */
-		KASSERT((paddr & PAGE_FRAME) == paddr);
-
 		/* Disable interrupts on this CPU while frobbing the TLB. */
 		spl = splhigh();
+
+		/* make sure it's page-aligned */
+		KASSERT((paddr & PAGE_FRAME) == paddr);
 
 		/* track stats for tlb fault */
 		vmstats_inc(VMSTAT_TLB_FAULT);
 
-		/* Adrian: This checks for invalid entries and writes the first invalid entry found */
-		for (i=0; i<NUM_TLB; i++) {
-			tlb_read(&ehi, &elo, i);
-			if (elo & TLBLO_VALID) {
-				continue;
-			}
-			ehi = faultaddress;
-			if (readonly) {
-				elo = paddr | TLBLO_VALID;
-			} else {
-				elo = paddr | TLBLO_DIRTY | TLBLO_VALID;
-			}
-			DEBUG(DB_VM, "dumbvm: 0x%x -> 0x%x\n", faultaddress, paddr);
-			tlb_write(ehi, elo, i);
-			// track stats for tlb fault free 
-			vmstats_inc(VMSTAT_TLB_FAULT_FREE);
-			splx(spl);
-			return 0;
-		} 
+		/* This checks for invalid entries and writes the first invalid entry found */
+        for (i=0; i<NUM_TLB; i++) {
+        		/* Read and skip all valid entries */
+                tlb_read(&ehi, &elo, i);
+                if (elo & TLBLO_VALID) {
+                        continue;
+                }
 
-		/* Adrian: In the case that there are no invalid entries we must evict one and replace it */
-		/* We use the round robin method to choose our victim to evict */
-		ehi = faultaddress;
-		if (readonly) {
-			elo = paddr | TLBLO_VALID;
-		} else {
-			elo = paddr | TLBLO_DIRTY | TLBLO_VALID;
-		}
-		i = tlb_get_rr_victim();
-		tlb_write(ehi, elo, i);
-		/* track stats for tlb fault replace */
-		vmstats_inc(VMSTAT_TLB_FAULT_REPLACE);
-		splx(spl);
+                /* Set the ehi to the fault address */
+                ehi = faultaddress;
 
-		// kprintf("dumbvm: Ran out of TLB entries - cannot handle page fault\n");
-		// return EFAULT;
+                /* If its readonly don't set the dirty bit */
+                if (readonly) {
+                	elo = paddr | TLBLO_VALID;
+                } else {
+                	elo = paddr | TLBLO_DIRTY | TLBLO_VALID;
+                }
+
+                /* Write to the TLB */
+                DEBUG(DB_VM, "dumbvm: 0x%x -> 0x%x\n", faultaddress, paddr);
+                tlb_write(ehi, elo, i);
+
+                /* track stats for tlb fault free */
+                vmstats_inc(VMSTAT_TLB_FAULT_FREE);
+
+                splx(spl);
+                return 0;
+        } 
+
+        /* If its readonly don't set the dirty bit */
+        ehi = faultaddress;
+        if (readonly) {
+        	elo = paddr | TLBLO_VALID;
+        } else {
+        	elo = paddr | TLBLO_DIRTY | TLBLO_VALID;
+        }
+
+        /* Choose a victim to evict using round robin */
+        i = tlb_get_rr_victim();
+        tlb_write(ehi, elo, i);
+
+        /* track stats for tlb fault replace */
+        vmstats_inc(VMSTAT_TLB_FAULT_REPLACE);
+
+        splx(spl);
 		return 0;
 	#else
 		/* Adapt code form dumbvm or implement something new */
