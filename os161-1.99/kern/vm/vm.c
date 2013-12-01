@@ -95,6 +95,7 @@ free_kpages(vaddr_t addr)
 	#if 0
 	coremap_free(addr);
 	#endif
+	(void)addr;
 	#else
 	/* nothing - leak the memory. */
 

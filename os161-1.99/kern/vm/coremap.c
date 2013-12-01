@@ -1,4 +1,5 @@
 #include <coremap.h>
+#include <segments.h>
 #include <types.h>
 #include <lib.h>
 #include <vm.h>
@@ -9,11 +10,11 @@ struct pte * cm_pages;
 struct lock * cm_lock;
 __u32 len;
 
-void coremap_init(paddr_t first, paddr_t last){
+void coremap_init(){
 
-	cm_lock = create_lock("cm_lock");
+	cm_lock = lock_create("cm_lock");
 	
-	acquire_lock(cm_lock);
+	lock_acquire(cm_lock);
 	
 	paddr_t first;
 	paddr_t last;
@@ -30,22 +31,21 @@ void coremap_init(paddr_t first, paddr_t last){
 
 	for(__u32 i =0; i < free_pages; i++){
 		cm_pages[i].paddr = first + PAGE_SIZE * i;
-		cm_pages[i].vaddr = PADDR_TO_KVADDR(first + PAGE_SIZE*i);
 		cm_pages[i].valid = 1;
 		cm_pages[i].dirty = 1;
 		cm_pages[i].free = 1;
 	}
 	
-	release_lock(cm_lock);
+	lock_release(cm_lock);
 }
 
 paddr_t coremap_alloc_contigous(unsigned long pages){
 	
-	acquire_lock(cm_lock);
+	lock_acquire(cm_lock);
 	__u32 i = 0;
 	while (i < len){
 		if(cm_pages[i].free){
-			__u32 incremenet = 1;
+			__u32 increment = 1;
 			while(cm_pages[increment+i].free && increment + i < pages){
 				increment++;
 			}
@@ -54,32 +54,32 @@ paddr_t coremap_alloc_contigous(unsigned long pages){
 			}
 		}
 	}
-	release_lock(cm_lock);
+	lock_release(cm_lock);
 	//Basic case, doesn'tcover when it cant find contigous
 	return 0;		
 }
 void coremap_free_segments(struct addrspace * addrsp){
-	coremap_free_segment(addrsp->code);
-	coremap_free_segment(addrsp->stack);
-	coremap_free_segment(addrsp->data);
+	lock_acquire(cm_lock);
+	// coremap_free_segment(addrsp->code);
+	// coremap_free_segment(addrsp->stack);
+	// coremap_free_segment(addrsp->data);
+	(void)addrsp;
+	lock_release(cm_lock);
 }
 
-void coremap_free_segment(struct segment * seg{
+void coremap_free_segment(struct segment * seg){
 	vaddr_t va;
+	__u32 pages;
 	va = seg->vbase;
 	pages = seg->npages;
-	for(int i =0; i < npages; i++){
-		struct pte * temp = (struct pte *)(vbase + i*PAGE_SIZE);
+	for(__u32 i =0; i < pages; i++){
+		struct pte * temp = (struct pte *)(va + i*PAGE_SIZE);
 		temp->free = 1;
 	}		
 		
 }
 
 void coremap_free(vaddr_t va){
-	
-	for(__u32 i =0; i < len; i++){
-		if(cm_pages[i].vaddr == va){
-			cm_pages[i].free = 1;
-		}
-	}
+(void)va;
 }
+
