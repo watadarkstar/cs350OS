@@ -6,10 +6,7 @@
 #include "lib.h"
 #include "segments.h"
 
-#define PT_SIZE 1024
-
 struct pte {
-	// vaddr -> paddr
 	paddr_t paddr;
   	int valid;
 };
