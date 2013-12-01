@@ -166,7 +166,7 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 
 		// TODO: the TLB should translate first (?)
 		if (faultaddress >= vbase1 && faultaddress < vtop1) {
-			/* Mark the code as readonly */
+			/* Mark the code as readonly we only want this to be marked after loading has been done */
 			if(as->loaded) readonly = true;
 
 			// paddr = (faultaddress - vbase1) + as->as_pbase1;
