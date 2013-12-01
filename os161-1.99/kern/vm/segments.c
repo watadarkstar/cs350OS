@@ -24,6 +24,7 @@ segment_prepare(struct segment *seg){
 
 	/* Allocate space for the page table based on the number of pages needed */
 	seg->ptable = kmalloc(sizeof(struct pte) * seg->npages);
+	for(unsigned int i = 0; i<seg->npages; i++){ pte_create(&seg->ptable[i]); }
 	return seg->ptable;
 }
 
