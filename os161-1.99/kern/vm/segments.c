@@ -21,10 +21,16 @@ struct pte *
 segment_prepare(struct segment *seg){
 	/* Ensure that the segment has been setup properly */
 	KASSERT(seg->npages != 0);
+	unsigned int i = 0;
 
 	/* Allocate space for the page table based on the number of pages needed */
 	seg->ptable = kmalloc(sizeof(struct pte) * seg->npages);
-	for(unsigned int i = 0; i<seg->npages; i++){ pte_create(&seg->ptable[i]); }
+	for(i = 0; i<seg->npages; i++){ pte_create(&seg->ptable[i]); }
+	
+	/* Its important that i is not zero even if its redundant, we MUST call 
+	   pte_create and this is the only way I know how to enforce that we call it */
+	KASSERT(i != 0);
+
 	return seg->ptable;
 }
 
