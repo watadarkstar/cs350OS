@@ -34,14 +34,19 @@ segment_prepare(struct segment *seg){
 	return seg->ptable;
 }
 
-paddr_t 
-segment_lookup(struct segment *seg, vaddr_t vaddr) {
+paddr_t
+segment_lookup(struct segment *seg, vaddr_t vaddr, bool dirty) {
 	int vpn = (vaddr - seg->vbase) / PAGE_SIZE;
 	struct pte *pte = &seg->ptable[vpn];
 	paddr_t paddr;
 
-	/* 
-	 	We have two cases: 
+  /*
+   * Mark page dirty if necessary
+   */
+  if (dirty) pte->dirty = 1;
+
+	/*
+	 	We have two cases:
 	 	(1) pte did not exist and we need to load a new pte
 	 	(2) pte already existed and we just reload the page table entry
 	*/

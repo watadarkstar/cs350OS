@@ -32,7 +32,7 @@ vm_bootstrap(void)
 	#endif
 }
 
-#if 0 
+#if 0
 /* You will need to call this at some point */
 static
 paddr_t
@@ -50,7 +50,7 @@ getppages(unsigned long npages)
 static unsigned int next_victim = 0;// we probably want a lock for this
 /* Round robin function for A3 */
 int
-tlb_get_rr_victim() 
+tlb_get_rr_victim()
 {
 	int victim;
 	victim = next_victim;
@@ -61,7 +61,7 @@ tlb_get_rr_victim()
 #endif
 
 /* Allocate/free some kernel-space virtual pages */
-vaddr_t 
+vaddr_t
 alloc_kpages(int npages)
 {
 	// based on dumbvm
@@ -80,7 +80,7 @@ alloc_kpages(int npages)
 	#endif
 }
 
-void 
+void
 free_kpages(vaddr_t addr)
 {
 	/* nothing - leak the memory. */
@@ -111,7 +111,8 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 		uint32_t ehi, elo;
 		struct addrspace *as;
 		int spl;
-		bool readonly = false; 
+		bool readonly = false;
+    bool attempting_write = false;
 
 		faultaddress &= PAGE_FRAME;
 
@@ -123,8 +124,10 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 				kprintf("VM_FAULT_READONLY - exiting...\n");
 				sys__exit(0);
 		    case VM_FAULT_READ:
+        break;
 		    case VM_FAULT_WRITE:
-			break;
+        attempting_write = true;
+        break;
 		    default:
 			return EINVAL;
 		}
@@ -164,7 +167,6 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 		stackbase = USERSTACK - STACKPAGES * PAGE_SIZE;
 		stacktop = USERSTACK;
 
-		// TODO: the TLB should translate first (?)
 		if (faultaddress >= vbase1 && faultaddress < vtop1) {
 			/* Mark the code as readonly we only want this to be marked after loading has been done */
 			if(as->loaded) readonly = true;
@@ -173,21 +175,21 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 			// kprintf("CODE %d\n", faultaddress);
 
 			/* Lookup the paddr for the faultaddress in the code segment */
-			paddr = segment_lookup(&as->code, faultaddress);
+			paddr = segment_lookup(&as->code, faultaddress, attempting_write);
 		}
 		else if (faultaddress >= vbase2 && faultaddress < vtop2) {
 			// paddr = (faultaddress - vbase2) + as->as_pbase2;
 			// kprintf("DATA %d\n", faultaddress);
 
 			/* Lookup the paddr for the faultaddress in the data segment */
-			paddr = segment_lookup(&as->data, faultaddress);
+			paddr = segment_lookup(&as->data, faultaddress, attempting_write);
 		}
 		else if (faultaddress >= stackbase && faultaddress < stacktop) {
 			// paddr = (faultaddress - stackbase) + as->as_stackpbase;
 			// kprintf("STACK%d\n", faultaddress);
 
 			/* Lookup the paddr for the faultaddress in the stack segment */
-			paddr = segment_lookup(&as->stack, faultaddress);
+			paddr = segment_lookup(&as->stack, faultaddress, attempting_write);
 		}
 		else {
 			return EFAULT;
@@ -229,7 +231,7 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 
                 splx(spl);
                 return 0;
-        } 
+        }
 
         /* If its readonly don't set the dirty bit */
         ehi = faultaddress;

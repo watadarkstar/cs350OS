@@ -7,7 +7,8 @@
 #include "segments.h"
 
 struct pte {
-  	int valid;
+  int valid;
+  int dirty;
 	paddr_t paddr;
 };
 

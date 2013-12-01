@@ -42,6 +42,7 @@
 #include <uw-vmstats.h>
 #include <segments.h>
 #include <pt.h>
+#include <swapfile.h>
 #endif
 
 
@@ -59,6 +60,10 @@
 	{
 		paddr_t pa;
 		spinlock_acquire(&stealmem_lock);
+    /*
+     * TODO: Eventually this needs to be replaced with properly kmallocing
+     * space which can be freed later.
+     */
 		pa = ram_stealmem(npages);
 		spinlock_release(&stealmem_lock);
 
@@ -168,7 +173,7 @@ as_copy(struct addrspace *old, struct addrspace **ret)
 		memmove((void *)PADDR_TO_KVADDR(new->as_stackpbase),
 			(const void *)PADDR_TO_KVADDR(old->as_stackpbase),
 			STACKPAGES*PAGE_SIZE);
-		
+
 		*ret = new;
 		return 0;
 	#else
@@ -184,7 +189,7 @@ as_copy(struct addrspace *old, struct addrspace **ret)
 		 */
 
 		(void)old;
-		
+
 		*ret = newas;
 		return 0;
 	#endif
@@ -196,7 +201,7 @@ as_destroy(struct addrspace *as)
 	/*
 	 * Clean up as needed.
 	 */
-	
+
 	kfree(as);
 }
 
@@ -274,7 +279,7 @@ as_define_region(struct addrspace *as, vaddr_t vaddr, size_t sz,
 {
 	// based on dumbvm code
 	#if OPT_A3
-		size_t npages; 
+		size_t npages;
 
 		/* Align the region. First, the base... */
 		sz += vaddr & ~(vaddr_t)PAGE_FRAME;
@@ -382,7 +387,7 @@ as_define_stack(struct addrspace *as, vaddr_t *stackptr)
 
 	/* Initial user-level stack pointer */
 	*stackptr = USERSTACK;
-	
+
 	return 0;
 }
 
