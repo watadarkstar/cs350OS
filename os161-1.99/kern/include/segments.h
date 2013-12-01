@@ -29,6 +29,6 @@ void segment_create(struct segment *seg, segment_t tsegment);
 struct pte * segment_prepare(struct segment *seg);
 
 /* Looksup a vaddr and finds the paddr based on the segment */
-paddr_t segment_lookup(struct segment *seg, vaddr_t vaddr);
+paddr_t segment_lookup(struct segment *seg, vaddr_t vaddr, bool dirty);
 
 #endif
