@@ -1,4 +1,7 @@
 #include <coremap.h>
+#include <types.h>
+#include <lib.h>
+#include <vm.h>
 
 struct pte ** cm_pages;
 
@@ -11,23 +14,23 @@ void coremap_init(paddr_t first, paddr_t last){
 	}
 	cm_pages = (struct pte**)PADDR_TO_KVADDR(first);
 	//paddr_t kernel_addr = first + pages * sizeof(struct pte);
-	
-	struct pt ** pages_iter = cm_pages;
+
+	struct pte ** pages_iter = cm_pages;
 	paddr_t address_iter = first;
-	size_t size = sizeof(struct pte);
-	
+	size_t size = sizeof(**pages_iter);
+
 	for(__u32 i =0; i < kernel_pages; i++){
-		pages_iter->paddr = address_iter;
-		pages_iter->valid = 1;
-		pages_iter->dirty = 0;
+		*pages_iter->paddr = address_iter;
+		*pages_iter->valid = 1;
+		*pages_iter->dirty = 0;
 		pages_iter++;
 		address_iter+=size;
 	}
-	
+
 	for(__u32 i =0; i < free_pages; i++){
-		pages_iter->paddr = address_iter;
-		pages_iter->valid = 1;
-		pages_iter->dirty = 1;
+		*pages_iter->paddr = address_iter;
+		*pages_iter->valid = 1;
+		*pages_iter->dirty = 1;
 		pages_iter++;
 		address_iter+=size;
 	}

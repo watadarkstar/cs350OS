@@ -1,7 +1,8 @@
-#ifndef __COREMAP_
-#define __COREMAP_
+#ifndef __COREMAP__
+#define __COREMAP__
 
-#include <pt.h>
+#include "types.h"
+#include "lib.h"
 
 void coremap_init(paddr_t first, paddr_t last);
 
