@@ -119,6 +119,7 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 
 		switch (faulttype) {
 		    case VM_FAULT_READONLY:
+		    	/* We want to terminate the procces if we have a vm readonly fault */
 				kprintf("VM_FAULT_READONLY - exiting...\n");
 				sys__exit(0);
 		    case VM_FAULT_READ:
@@ -163,20 +164,29 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 		stackbase = USERSTACK - STACKPAGES * PAGE_SIZE;
 		stacktop = USERSTACK;
 
+		// TODO: the TLB should translate first (?)
 		if (faultaddress >= vbase1 && faultaddress < vtop1) {
+			/* Mark the code as readonly */
 			if(as->loaded) readonly = true;
+
 			// paddr = (faultaddress - vbase1) + as->as_pbase1;
 			// kprintf("CODE %d\n", faultaddress);
+
+			/* Lookup the paddr for the faultaddress in the code segment */
 			paddr = segment_lookup(&as->code, faultaddress);
 		}
 		else if (faultaddress >= vbase2 && faultaddress < vtop2) {
 			// paddr = (faultaddress - vbase2) + as->as_pbase2;
 			// kprintf("DATA %d\n", faultaddress);
+
+			/* Lookup the paddr for the faultaddress in the data segment */
 			paddr = segment_lookup(&as->data, faultaddress);
 		}
 		else if (faultaddress >= stackbase && faultaddress < stacktop) {
 			// paddr = (faultaddress - stackbase) + as->as_stackpbase;
 			// kprintf("STACK%d\n", faultaddress);
+
+			/* Lookup the paddr for the faultaddress in the stack segment */
 			paddr = segment_lookup(&as->stack, faultaddress);
 		}
 		else {
@@ -194,16 +204,20 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 
 		/* This checks for invalid entries and writes the first invalid entry found */
         for (i=0; i<NUM_TLB; i++) {
+        		/* Read and skip all valid entries */
                 tlb_read(&ehi, &elo, i);
                 if (elo & TLBLO_VALID) {
                         continue;
                 }
+
+                /* Set the ehi to the fault address */
                 ehi = faultaddress;
 
+                /* If its readonly don't set the dirty bit */
                 if (readonly) {
-                        elo = paddr | TLBLO_VALID;
+                	elo = paddr | TLBLO_VALID;
                 } else {
-                        elo = paddr | TLBLO_DIRTY | TLBLO_VALID;
+                	elo = paddr | TLBLO_DIRTY | TLBLO_VALID;
                 }
 
                 /* Write to the TLB */
@@ -217,13 +231,12 @@ vm_fault(int faulttype, vaddr_t faultaddress)
                 return 0;
         } 
 
-        /* In the case that there are no invalid entries we must evict one and replace it */
-        /* We use the round robin method to choose our victim to evict */
+        /* If its readonly don't set the dirty bit */
         ehi = faultaddress;
         if (readonly) {
-                elo = paddr | TLBLO_VALID;
+        	elo = paddr | TLBLO_VALID;
         } else {
-                elo = paddr | TLBLO_DIRTY | TLBLO_VALID;
+        	elo = paddr | TLBLO_DIRTY | TLBLO_VALID;
         }
 
         /* Choose a victim to evict using round robin */

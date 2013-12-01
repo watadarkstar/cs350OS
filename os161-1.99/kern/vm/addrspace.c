@@ -53,20 +53,20 @@
 	 */
 	struct spinlock stealmem_lock = SPINLOCK_INITIALIZER;
 
-	// based on dumbvm
+	// based on dumbvm code
 	paddr_t
 	getppages(unsigned long npages)
 	{
-		paddr_t addr;
+		paddr_t pa;
 		spinlock_acquire(&stealmem_lock);
-		addr = ram_stealmem(npages);
+		pa = ram_stealmem(npages);
 		spinlock_release(&stealmem_lock);
 
-		if(addr == 0){
+		/* Check that we did get a physical address otherwise this is a problem and the os hangs silently */
+		if(pa == 0){
 			panic("getppages failed no memory - probably due to the sys.conf file your using; use sys161-8MB.conf \n");
 		}
-
-		return addr;
+		return pa;
 	}
 
 	// based on dumbvm
@@ -93,7 +93,7 @@ as_create(void)
 			return NULL;
 		}
 
-		/* Adrian: For now we leave this here */
+		/* Adrian: For now we leave this here to support the old code as well */
 		as->as_vbase1 = 0;
 		as->as_pbase1 = 0;
 		as->as_npages1 = 0;
@@ -101,7 +101,6 @@ as_create(void)
 		as->as_pbase2 = 0;
 		as->as_npages2 = 0;
 		as->as_stackpbase = 0;
-		/* Adrian: For now we leave this here */
 
 		/* Create the code segment */
 		segment_create(&as->code, CODE);
@@ -112,6 +111,7 @@ as_create(void)
 		/* Create the stack segment */
 		segment_create(&as->stack, STACK);
 
+		/* Mark the address space as not fully loaded */
 		as->loaded = false;
 
 		return as;
@@ -290,25 +290,33 @@ as_define_region(struct addrspace *as, vaddr_t vaddr, size_t sz,
 		(void)writeable;
 		(void)executable;
 
-		/* Adrian: For now we leave this here */
+		/* Adrian: For now we leave the old code here as well */
 		if (as->as_vbase1 == 0 && as->code.vbase == 0) {
+			/* Setup the segment */
 			as->as_vbase1 = vaddr;
 			as->as_npages1 = npages;
             as->code.npages = npages;
+
+            /* Prepare the page table now that we have the npages needed */
 			as->code.ptable = segment_prepare(&as->code);
 			as->code.vbase = vaddr;
+
 			return 0;
 		}
 
+		/* Adrian: For now we leave the old code here as well */
 		if (as->as_vbase2 == 0 && as->data.vbase == 0) {
+			/* Setup the segment */
 			as->as_vbase2 = vaddr;
 			as->as_npages2 = npages;
             as->data.npages = npages;
+
+            /* Prepare the page table now that we have the npages needed */
 			as->data.ptable = segment_prepare(&as->data);
 			as->data.vbase = vaddr;
+
 			return 0;
 		}
-		/* Adrian: For now we leave this here */
 
 		/*
 		 * Support for more than two regions is not available.
@@ -350,10 +358,10 @@ as_prepare_load(struct addrspace *as)
 int
 as_complete_load(struct addrspace *as)
 {
-	/*
-	 * Write this.
-	 */
-	 as->loaded = true;
+	#if OPT_A3
+		/* Mark the address space as fully loaded */
+		as->loaded = true;
+	#endif
 
 	(void)as;
 	return 0;
