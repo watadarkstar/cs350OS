@@ -111,7 +111,6 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 		uint32_t ehi, elo;
 		struct addrspace *as;
 		int spl;
-		int victim;
 		bool readonly = false; 
 
 		faultaddress &= PAGE_FRAME;
@@ -161,24 +160,24 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 		vtop1 = vbase1 + as->code.npages * PAGE_SIZE;
 		vbase2 = as->data.vbase;
 		vtop2 = vbase2 + as->data.npages * PAGE_SIZE;
-		stackbase = USERSTACK - DUMBVM_STACKPAGES * PAGE_SIZE;
+		stackbase = USERSTACK - STACKPAGES * PAGE_SIZE;
 		stacktop = USERSTACK;
 
 		if (faultaddress >= vbase1 && faultaddress < vtop1) {
 			if(as->loaded) readonly = true;
 			// paddr = (faultaddress - vbase1) + as->as_pbase1;
 			// kprintf("CODE %d\n", faultaddress);
-			paddr = segment_translate(&as->code, faultaddress);
+			paddr = segment_lookup(&as->code, faultaddress);
 		}
 		else if (faultaddress >= vbase2 && faultaddress < vtop2) {
 			// paddr = (faultaddress - vbase2) + as->as_pbase2;
 			// kprintf("DATA %d\n", faultaddress);
-			paddr = segment_translate(&as->data, faultaddress);
+			paddr = segment_lookup(&as->data, faultaddress);
 		}
 		else if (faultaddress >= stackbase && faultaddress < stacktop) {
 			// paddr = (faultaddress - stackbase) + as->as_stackpbase;
 			// kprintf("STACK%d\n", faultaddress);
-			paddr = segment_translate(&as->stack, faultaddress);
+			paddr = segment_lookup(&as->stack, faultaddress);
 		}
 		else {
 			return EFAULT;
@@ -187,38 +186,38 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 		/* Disable interrupts on this CPU while frobbing the TLB. */
 		spl = splhigh();
 
-		/* New TLB Management stuff for victim eviction */
-		victim = tlb_get_rr_victim();
-
 		/* make sure it's page-aligned */
 		KASSERT((paddr & PAGE_FRAME) == paddr);
 
 		/* track stats for tlb fault */
 		vmstats_inc(VMSTAT_TLB_FAULT);
 
-		/* Adrian: This checks for invalid entries and writes the first invalid entry found */
+		/* This checks for invalid entries and writes the first invalid entry found */
         for (i=0; i<NUM_TLB; i++) {
                 tlb_read(&ehi, &elo, i);
                 if (elo & TLBLO_VALID) {
                         continue;
                 }
                 ehi = faultaddress;
+
                 if (readonly) {
                         elo = paddr | TLBLO_VALID;
                 } else {
                         elo = paddr | TLBLO_DIRTY | TLBLO_VALID;
                 }
+
+                /* Write to the TLB */
                 DEBUG(DB_VM, "dumbvm: 0x%x -> 0x%x\n", faultaddress, paddr);
                 tlb_write(ehi, elo, i);
 
-                // track stats for tlb fault free 
+                /* track stats for tlb fault free */
                 vmstats_inc(VMSTAT_TLB_FAULT_FREE);
-                
+
                 splx(spl);
                 return 0;
         } 
 
-        /* Adrian: In the case that there are no invalid entries we must evict one and replace it */
+        /* In the case that there are no invalid entries we must evict one and replace it */
         /* We use the round robin method to choose our victim to evict */
         ehi = faultaddress;
         if (readonly) {
@@ -226,6 +225,8 @@ vm_fault(int faulttype, vaddr_t faultaddress)
         } else {
                 elo = paddr | TLBLO_DIRTY | TLBLO_VALID;
         }
+
+        /* Choose a victim to evict using round robin */
         i = tlb_get_rr_victim();
         tlb_write(ehi, elo, i);
 

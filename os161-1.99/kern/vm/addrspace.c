@@ -103,11 +103,15 @@ as_create(void)
 		as->as_stackpbase = 0;
 		/* Adrian: For now we leave this here */
 
-		segment_create(&as->code);
-		segment_create(&as->data);
-		segment_create(&as->stack);
-		as->stack.vbase = USERSTACK - DUMBVM_STACKPAGES*PAGE_SIZE;
-        as->stack.npages = DUMBVM_STACKPAGES;
+		/* Create the code segment */
+		segment_create(&as->code, CODE);
+
+		/* Create the data segment */
+		segment_create(&as->data, DATA);
+
+		/* Create the stack segment */
+		segment_create(&as->stack, STACK);
+
 		as->loaded = false;
 
 		return as;
@@ -131,12 +135,7 @@ int
 as_copy(struct addrspace *old, struct addrspace **ret)
 {
 	#if OPT_A3
-		(void)old;
-		(void)ret;
-		// Adrian: I want this to fail, we don't support this yet and I dont want to deal with it
-		KASSERT(0);
-
-		/* struct addrspace *new;
+		struct addrspace *new;
 
 		new = as_create();
 		if (new==NULL) {
@@ -168,10 +167,9 @@ as_copy(struct addrspace *old, struct addrspace **ret)
 
 		memmove((void *)PADDR_TO_KVADDR(new->as_stackpbase),
 			(const void *)PADDR_TO_KVADDR(old->as_stackpbase),
-			DUMBVM_STACKPAGES*PAGE_SIZE);
+			STACKPAGES*PAGE_SIZE);
 		
 		*ret = new;
-		*/
 		return 0;
 	#else
 		struct addrspace *newas;
@@ -337,33 +335,7 @@ as_prepare_load(struct addrspace *as)
 {
 	// based on dumbvm code
 	#if OPT_A3
-		
-		/*
-		KASSERT(as->as_pbase1 == 0);
-		KASSERT(as->as_pbase2 == 0);
-		KASSERT(as->as_stackpbase == 0);
-
-		as->as_pbase1 = getppages(as->code.npages);
-		if (as->as_pbase1 == 0) {
-			return ENOMEM;
-		}
-
-		as->as_pbase2 = getppages(as->data.npages);
-		if (as->as_pbase2 == 0) {
-			return ENOMEM;
-		}
-
-		as->as_stackpbase = getppages(DUMBVM_STACKPAGES);
-		if (as->as_stackpbase == 0) {
-			return ENOMEM;
-		}
-		
-		as_zero_region(as->as_pbase1, as->as_npages1);
-		as_zero_region(as->as_pbase2, as->as_npages2);
-		as_zero_region(as->as_stackpbase, DUMBVM_STACKPAGES);
-		*/
-
-		as->stack.ptable = segment_prepare(&as->stack);
+		(void)as;
 		return 0;
 	#else
 		/*

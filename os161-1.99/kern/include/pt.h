@@ -7,10 +7,17 @@
 #include "segments.h"
 
 struct pte {
-	paddr_t paddr;
   	int valid;
+	paddr_t paddr;
 };
 
+/* Creates a page table entry */
 void pte_create(struct pte * pte);
+
+/* Load a page table entry by creating a paddr for it */
+paddr_t pte_load(struct pte * pte);
+
+/* Reload the page table entry by translating its paddr */
+paddr_t pte_reload(struct pte * pte, int offset);
 
 #endif

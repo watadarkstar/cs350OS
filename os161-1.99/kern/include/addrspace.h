@@ -71,8 +71,10 @@ struct addrspace {
         paddr_t as_stackpbase;
 
         // New stuff for A3
-        struct segment code, data, stack;// 3 types of segments
-        bool loaded;// set to true in as_complete_load
+
+        /* OS161 has 3 types of segments */
+        struct segment code, data, stack;
+        bool loaded;
 #endif
 };
 
@@ -141,8 +143,6 @@ int load_elf(struct vnode *v, vaddr_t *entrypoint);
 #if OPT_A3
   paddr_t getppages(unsigned long npages);
   void as_zero_region(paddr_t paddr, unsigned npages);
-  /* based on dumbvm, always have 48k of user stack */
-  #define DUMBVM_STACKPAGES    12
 #endif
 
 #endif /* _ADDRSPACE_H_ */
